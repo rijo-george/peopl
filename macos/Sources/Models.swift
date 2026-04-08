@@ -1,0 +1,539 @@
+import AppKit
+import Foundation
+
+// MARK: - Data model (stored as data.json)
+
+struct NamedDate: Codable, Identifiable, Hashable {
+    var id: String
+    var label: String   // "Anniversary", "Work start date"
+    var date: String    // "MM-dd" (recurring) or "yyyy-MM-dd" (one-time)
+}
+
+struct Person: Codable, Identifiable, Hashable {
+    var id: String
+    var name: String
+    var company: String
+    var email: String
+    var phone: String
+    var tags: [String]
+    var notes: String
+    var birthday: String    // "MM-dd" format, empty if unknown
+    var dates: [NamedDate]
+    var created_at: String
+    var archived: Bool
+
+    var displayInitials: String {
+        let parts = name.split(separator: " ")
+        if parts.count >= 2 {
+            return String(parts[0].prefix(1) + parts[1].prefix(1)).uppercased()
+        }
+        return String(name.prefix(2)).uppercased()
+    }
+}
+
+struct Interaction: Codable, Identifiable, Hashable {
+    var id: String
+    var person_id: String
+    var date: String
+    var channel: String
+    var note: String
+
+    var dateDisplay: String {
+        guard let d = ISO8601Flexible.date(from: date) else { return "-" }
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMM d, yyyy"
+        return fmt.string(from: d)
+    }
+
+    var shortDateDisplay: String {
+        guard let d = ISO8601Flexible.date(from: date) else { return "-" }
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMM d"
+        return fmt.string(from: d)
+    }
+}
+
+struct PeoplData: Codable {
+    var people: [Person]
+    var interactions: [Interaction]
+}
+
+// MARK: - Channel helpers
+
+enum Channel: String, CaseIterable, Identifiable {
+    case coffee, call, email, text, meeting, other
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .coffee:  return "Coffee"
+        case .call:    return "Call"
+        case .email:   return "Email"
+        case .text:    return "Text"
+        case .meeting: return "Meeting"
+        case .other:   return "Other"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .coffee:  return "cup.and.saucer.fill"
+        case .call:    return "phone.fill"
+        case .email:   return "envelope.fill"
+        case .text:    return "message.fill"
+        case .meeting: return "person.2.fill"
+        case .other:   return "ellipsis.circle.fill"
+        }
+    }
+
+    static func from(_ string: String) -> Channel {
+        Channel(rawValue: string) ?? .other
+    }
+}
+
+// MARK: - Relationship Weather
+
+enum Weather: Comparable {
+    case sunny, partlyCloudy, cloudy, rainy, stormy
+
+    var icon: String {
+        switch self {
+        case .sunny:        return "sun.max.fill"
+        case .partlyCloudy: return "cloud.sun.fill"
+        case .cloudy:       return "cloud.fill"
+        case .rainy:        return "cloud.rain.fill"
+        case .stormy:       return "cloud.bolt.fill"
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .sunny:        return "Sunny"
+        case .partlyCloudy: return "Partly Cloudy"
+        case .cloudy:       return "Cloudy"
+        case .rainy:        return "Rainy"
+        case .stormy:       return "Stormy"
+        }
+    }
+
+    var colorRGB: (r: Double, g: Double, b: Double) {
+        switch self {
+        case .sunny:        return (1.00, 0.85, 0.20)  // yellow
+        case .partlyCloudy: return (0.70, 0.70, 0.60)  // warm gray
+        case .cloudy:       return (0.55, 0.60, 0.70)   // cool gray
+        case .rainy:        return (0.30, 0.55, 0.85)   // blue
+        case .stormy:       return (0.55, 0.30, 0.75)   // purple
+        }
+    }
+
+    static func from(daysSinceLastInteraction days: Int?) -> Weather {
+        guard let days else { return .stormy }
+        if days <= 14 { return .sunny }
+        if days <= 30 { return .partlyCloudy }
+        if days <= 60 { return .cloudy }
+        if days <= 90 { return .rainy }
+        return .stormy
+    }
+}
+
+// MARK: - Upcoming dates helper
+
+struct UpcomingEvent: Identifiable {
+    var id: String { "\(personID)-\(label)-\(monthDay)" }
+    var personID: String
+    var personName: String
+    var label: String       // "Birthday" or custom label
+    var monthDay: String    // "MM-dd"
+    var daysUntil: Int
+    var isBirthday: Bool
+}
+
+// MARK: - Flexible ISO parser
+
+enum ISO8601Flexible {
+    private static let fullFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
+    private static let basicFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+
+    private static let dateOnly: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
+
+    static func date(from string: String) -> Date? {
+        let cleaned = string.count > 26 ? String(string.prefix(26)) : string
+        if let d = fullFormatter.date(from: cleaned + "+00:00") { return d }
+        if let d = fullFormatter.date(from: string + "+00:00") { return d }
+        if let d = basicFormatter.date(from: string + "+00:00") { return d }
+        if let d = basicFormatter.date(from: string) { return d }
+        if let d = dateOnly.date(from: string) { return d }
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "en_US_POSIX")
+        for fmt in ["yyyy-MM-dd'T'HH:mm:ss.SSSSSS", "yyyy-MM-dd'T'HH:mm:ss.SSS", "yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd"] {
+            df.dateFormat = fmt
+            if let d = df.date(from: string) { return d }
+        }
+        return nil
+    }
+}
+
+// MARK: - Storage location (iCloud Drive with local fallback)
+
+enum StorageLocation {
+    static let iCloudDir: URL = {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        return home
+            .appendingPathComponent("Library/Mobile Documents/iCloud~com~rijo~peopl")
+            .appendingPathComponent("Documents")
+    }()
+
+    static let localDir: URL = {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        return home.appendingPathComponent(".peopl")
+    }()
+
+    static func resolve() -> URL {
+        let fm = FileManager.default
+        let iCloudRoot = fm.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Mobile Documents")
+        let iCloudAvailable = fm.fileExists(atPath: iCloudRoot.path)
+
+        if iCloudAvailable {
+            try? fm.createDirectory(at: iCloudDir, withIntermediateDirectories: true)
+            setupSymlink(fm: fm, target: iCloudDir)
+            return iCloudDir
+        }
+
+        try? fm.createDirectory(at: localDir, withIntermediateDirectories: true)
+        return localDir
+    }
+
+    private static func setupSymlink(fm: FileManager, target: URL) {
+        let linkPath = localDir.path
+        let targetPath = target.path
+
+        if let dest = try? fm.destinationOfSymbolicLink(atPath: linkPath), dest == targetPath {
+            return
+        }
+
+        if fm.fileExists(atPath: linkPath) {
+            let attrs = try? fm.attributesOfItem(atPath: linkPath)
+            if attrs?[.type] as? FileAttributeType == .typeSymbolicLink {
+                try? fm.removeItem(atPath: linkPath)
+            }
+        }
+
+        if !fm.fileExists(atPath: linkPath) {
+            try? fm.createSymbolicLink(atPath: linkPath, withDestinationPath: targetPath)
+        }
+    }
+}
+
+// MARK: - Store
+
+class PeoplStore: ObservableObject {
+    @Published var data: PeoplData
+
+    private let dataDir: URL
+    private let dataFile: URL
+    private var fileMonitor: DispatchSourceFileSystemObject?
+    private var fileDescriptor: Int32 = -1
+
+    init() {
+        dataDir = StorageLocation.resolve()
+        dataFile = dataDir.appendingPathComponent("data.json")
+        data = PeoplData(people: [], interactions: [])
+        coordinatedLoad()
+        startFileMonitor()
+
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.coordinatedLoad()
+        }
+    }
+
+    deinit {
+        fileMonitor?.cancel()
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    // MARK: - Coordinated Load / Save
+
+    func load() { coordinatedLoad() }
+
+    func coordinatedLoad() {
+        try? FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
+        let coordinator = NSFileCoordinator()
+        var coordError: NSError?
+        var needsSave = false
+        coordinator.coordinate(readingItemAt: dataFile, options: [], error: &coordError) { url in
+            guard let raw = try? Data(contentsOf: url),
+                  let disk = try? JSONDecoder().decode(PeoplData.self, from: raw)
+            else { return }
+            let merged = Self.merge(local: self.data, remote: disk)
+            needsSave = !Self.dataEqual(merged, disk)
+            DispatchQueue.main.async {
+                self.data = merged
+            }
+        }
+        if needsSave { save() }
+    }
+
+    func save() {
+        let coordinator = NSFileCoordinator()
+        var coordError: NSError?
+
+        coordinator.coordinate(readingItemAt: dataFile, options: [],
+                               writingItemAt: dataFile, options: .forReplacing,
+                               error: &coordError) { readURL, writeURL in
+            var merged = self.data
+            if let raw = try? Data(contentsOf: readURL),
+               let disk = try? JSONDecoder().decode(PeoplData.self, from: raw) {
+                merged = Self.merge(local: self.data, remote: disk)
+            }
+
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            guard let raw = try? encoder.encode(merged) else { return }
+            try? raw.write(to: writeURL, options: .atomic)
+
+            DispatchQueue.main.async {
+                self.data = merged
+            }
+        }
+    }
+
+    // MARK: - Merge logic (union by ID)
+
+    private static func merge(local: PeoplData, remote: PeoplData) -> PeoplData {
+        PeoplData(
+            people: mergeByID(local: local.people, remote: remote.people),
+            interactions: mergeByID(local: local.interactions, remote: remote.interactions)
+        )
+    }
+
+    private static func mergeByID<T: Identifiable & Codable>(local: [T], remote: [T]) -> [T] where T.ID == String {
+        var byID: [String: T] = [:]
+        for item in remote { byID[item.id] = item }
+        for item in local { byID[item.id] = item } // local wins
+        var result: [T] = []
+        var seen = Set<String>()
+        for item in local {
+            if seen.insert(item.id).inserted { result.append(byID[item.id]!) }
+        }
+        for item in remote {
+            if seen.insert(item.id).inserted { result.append(byID[item.id]!) }
+        }
+        return result
+    }
+
+    private static func dataEqual(_ a: PeoplData, _ b: PeoplData) -> Bool {
+        let ids = { (d: PeoplData) in
+            Set(d.people.map(\.id) + d.interactions.map(\.id))
+        }
+        return ids(a) == ids(b)
+    }
+
+    // MARK: - File monitoring
+
+    private func startFileMonitor() {
+        fileMonitor?.cancel()
+        fileMonitor = nil
+
+        let fd = open(dataFile.path, O_EVTONLY)
+        guard fd >= 0 else { return }
+        fileDescriptor = fd
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd, eventMask: [.write, .rename], queue: .main)
+        source.setEventHandler { [weak self] in
+            guard let self else { return }
+            self.coordinatedLoad()
+            self.startFileMonitor()
+        }
+        source.setCancelHandler { close(fd) }
+        source.resume()
+        fileMonitor = source
+    }
+
+    // MARK: - Person actions
+
+    func addPerson(name: String, company: String, email: String, phone: String,
+                   tags: [String], notes: String, birthday: String, dates: [NamedDate]) {
+        let person = Person(
+            id: UUID().uuidString,
+            name: name, company: company, email: email, phone: phone,
+            tags: tags, notes: notes, birthday: birthday, dates: dates,
+            created_at: pythonISO(), archived: false
+        )
+        data.people.append(person)
+        save()
+    }
+
+    func updatePerson(_ person: Person) {
+        if let idx = data.people.firstIndex(where: { $0.id == person.id }) {
+            data.people[idx] = person
+            save()
+        }
+    }
+
+    func archivePerson(_ person: Person) {
+        if let idx = data.people.firstIndex(where: { $0.id == person.id }) {
+            data.people[idx].archived = true
+            save()
+        }
+    }
+
+    func unarchivePerson(_ person: Person) {
+        if let idx = data.people.firstIndex(where: { $0.id == person.id }) {
+            data.people[idx].archived = false
+            save()
+        }
+    }
+
+    // MARK: - Interaction actions
+
+    func addInteraction(personID: String, channel: String, note: String, date: Date = Date()) {
+        let interaction = Interaction(
+            id: UUID().uuidString,
+            person_id: personID,
+            date: pythonISO(date),
+            channel: channel,
+            note: note
+        )
+        data.interactions.append(interaction)
+        save()
+    }
+
+    func deleteInteraction(_ interaction: Interaction) {
+        data.interactions.removeAll { $0.id == interaction.id }
+        save()
+    }
+
+    // MARK: - Queries
+
+    func interactions(for personID: String) -> [Interaction] {
+        data.interactions
+            .filter { $0.person_id == personID }
+            .sorted { ($0.date) > ($1.date) }
+    }
+
+    func lastInteraction(for personID: String) -> Interaction? {
+        interactions(for: personID).first
+    }
+
+    func daysSinceLastInteraction(for personID: String) -> Int? {
+        guard let last = lastInteraction(for: personID),
+              let d = ISO8601Flexible.date(from: last.date) else { return nil }
+        return Calendar.current.dateComponents([.day], from: d, to: Date()).day
+    }
+
+    func weather(for personID: String) -> Weather {
+        Weather.from(daysSinceLastInteraction: daysSinceLastInteraction(for: personID))
+    }
+
+    var activePeople: [Person] {
+        data.people.filter { !$0.archived }
+    }
+
+    var archivedPeople: [Person] {
+        data.people.filter { $0.archived }
+    }
+
+    // MARK: - Upcoming events
+
+    func upcomingEvents(withinDays: Int = 14) -> [UpcomingEvent] {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let todayComponents = cal.dateComponents([.month, .day], from: today)
+        let todayDayOfYear = cal.ordinality(of: .day, in: .year, for: today) ?? 1
+        let daysInYear = cal.range(of: .day, in: .year, for: today)?.count ?? 365
+
+        var events: [UpcomingEvent] = []
+
+        for person in activePeople {
+            // Birthday
+            if !person.birthday.isEmpty, let md = parseMonthDay(person.birthday) {
+                if let daysUntil = daysUntilDate(month: md.month, day: md.day,
+                                                   todayComponents: todayComponents,
+                                                   todayDayOfYear: todayDayOfYear,
+                                                   daysInYear: daysInYear),
+                   daysUntil <= withinDays {
+                    events.append(UpcomingEvent(
+                        personID: person.id, personName: person.name,
+                        label: "Birthday", monthDay: person.birthday,
+                        daysUntil: daysUntil, isBirthday: true
+                    ))
+                }
+            }
+
+            // Custom dates
+            for nd in person.dates {
+                if let md = parseMonthDay(nd.date),
+                   let daysUntil = daysUntilDate(month: md.month, day: md.day,
+                                                   todayComponents: todayComponents,
+                                                   todayDayOfYear: todayDayOfYear,
+                                                   daysInYear: daysInYear),
+                   daysUntil <= withinDays {
+                    events.append(UpcomingEvent(
+                        personID: person.id, personName: person.name,
+                        label: nd.label, monthDay: nd.date,
+                        daysUntil: daysUntil, isBirthday: false
+                    ))
+                }
+            }
+        }
+
+        return events.sorted { $0.daysUntil < $1.daysUntil }
+    }
+
+    private func parseMonthDay(_ string: String) -> (month: Int, day: Int)? {
+        let parts = string.split(separator: "-")
+        // Handle "MM-dd" or "yyyy-MM-dd"
+        if parts.count == 2, let m = Int(parts[0]), let d = Int(parts[1]) {
+            return (m, d)
+        }
+        if parts.count == 3, let m = Int(parts[1]), let d = Int(parts[2]) {
+            return (m, d)
+        }
+        return nil
+    }
+
+    private func daysUntilDate(month: Int, day: Int,
+                                todayComponents: DateComponents,
+                                todayDayOfYear: Int,
+                                daysInYear: Int) -> Int? {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        var comps = DateComponents()
+        comps.year = cal.component(.year, from: today)
+        comps.month = month
+        comps.day = day
+        guard let targetThisYear = cal.date(from: comps) else { return nil }
+        let targetDay = cal.ordinality(of: .day, in: .year, for: targetThisYear) ?? 1
+
+        var diff = targetDay - todayDayOfYear
+        if diff < 0 { diff += daysInYear }
+        return diff
+    }
+
+    // MARK: Helpers
+
+    private func pythonISO(_ date: Date = Date()) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
+        return f.string(from: date)
+    }
+}

@@ -6,10 +6,10 @@ struct JournalView: View {
     let person: Person
     var namespace: Namespace.ID
     var onBack: () -> Void
+    @Binding var showingAddMemory: Bool
+    @Binding var showingAddInteraction: Bool
+    @Binding var showingEditPerson: Bool
 
-    @State private var showingAddMemory = false
-    @State private var showingAddInteraction = false
-    @State private var showingEditPerson = false
     @State private var showInteractions = false
     @State private var memoryToDelete: Memory?
 
@@ -53,7 +53,7 @@ struct JournalView: View {
                                 .clipShape(Circle())
                         }
                         .buttonStyle(.plain)
-                        .help("Log interaction [I]")
+                        .help("Log interaction (Cmd+Shift+I)")
 
                         Button(action: { showingAddMemory = true }) {
                             Image(systemName: "brain.filled.head.profile")
@@ -65,32 +65,12 @@ struct JournalView: View {
                                 .shadow(color: tc.warmAccent.opacity(0.4), radius: 8, y: 4)
                         }
                         .buttonStyle(.plain)
-                        .help("Add memory [M]")
+                        .help("Add memory (Cmd+Shift+M)")
                     }
                     .padding(.trailing, 28)
                     .padding(.bottom, 24)
                 }
             }
-        }
-        .focusable()
-        .onKeyPress(.escape) { onBack(); return .handled }
-        .onKeyPress(characters: CharacterSet(charactersIn: "mM")) { _ in showingAddMemory = true; return .handled }
-        .onKeyPress(characters: CharacterSet(charactersIn: "iI")) { _ in showingAddInteraction = true; return .handled }
-        .onKeyPress(characters: CharacterSet(charactersIn: "eE")) { _ in showingEditPerson = true; return .handled }
-        .sheet(isPresented: $showingAddMemory) {
-            AddMemorySheet(person: person)
-                .environmentObject(store)
-                .environmentObject(theme)
-        }
-        .sheet(isPresented: $showingAddInteraction) {
-            AddInteractionSheet(person: person)
-                .environmentObject(store)
-                .environmentObject(theme)
-        }
-        .sheet(isPresented: $showingEditPerson) {
-            EditPersonSheet(person: person)
-                .environmentObject(store)
-                .environmentObject(theme)
         }
         .alert("Delete this memory?", isPresented: Binding(
             get: { memoryToDelete != nil },

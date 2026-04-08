@@ -3,23 +3,34 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var store: PeoplStore
     @EnvironmentObject var theme: ThemeManager
+    @EnvironmentObject var shortcuts: ShortcutState
     @State private var selectedPersonID: String?
     @State private var showingAddPerson = false
     @State private var showingThemePicker = false
+    @State private var showingAddMemory = false
+    @State private var showingAddInteraction = false
+    @State private var showingEditPerson = false
     @Namespace private var cardTransition
 
     private var tc: ThemeColors { theme.colors }
+
+    private var selectedPerson: Person? {
+        guard let id = selectedPersonID else { return nil }
+        return store.data.people.first { $0.id == id }
+    }
 
     var body: some View {
         ZStack {
             tc.bg.ignoresSafeArea()
 
-            if let personID = selectedPersonID,
-               let person = store.data.people.first(where: { $0.id == personID }) {
+            if let person = selectedPerson {
                 JournalView(
                     person: person,
                     namespace: cardTransition,
-                    onBack: { withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { selectedPersonID = nil } }
+                    onBack: { withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { selectedPersonID = nil } },
+                    showingAddMemory: $showingAddMemory,
+                    showingAddInteraction: $showingAddInteraction,
+                    showingEditPerson: $showingEditPerson
                 )
                 .transition(.opacity.combined(with: .scale(scale: 0.98)))
             } else {
@@ -33,14 +44,6 @@ struct ContentView: View {
             }
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.85), value: selectedPersonID)
-        .focusable()
-        .onKeyPress(characters: CharacterSet(charactersIn: "aA")) { _ in
-            if selectedPersonID == nil { showingAddPerson = true }
-            return selectedPersonID == nil ? .handled : .ignored
-        }
-        .onKeyPress(characters: CharacterSet(charactersIn: "tT")) { _ in
-            showingThemePicker = true; return .handled
-        }
         .sheet(isPresented: $showingAddPerson) {
             AddPersonSheet()
                 .environmentObject(store)
@@ -49,6 +52,46 @@ struct ContentView: View {
         .sheet(isPresented: $showingThemePicker) {
             ThemePickerSheet()
                 .environmentObject(theme)
+        }
+        .sheet(isPresented: $showingAddMemory) {
+            if let person = selectedPerson {
+                AddMemorySheet(person: person)
+                    .environmentObject(store)
+                    .environmentObject(theme)
+            }
+        }
+        .sheet(isPresented: $showingAddInteraction) {
+            if let person = selectedPerson {
+                AddInteractionSheet(person: person)
+                    .environmentObject(store)
+                    .environmentObject(theme)
+            }
+        }
+        .sheet(isPresented: $showingEditPerson) {
+            if let person = selectedPerson {
+                EditPersonSheet(person: person)
+                    .environmentObject(store)
+                    .environmentObject(theme)
+            }
+        }
+        .onChange(of: shortcuts.lastAction) { _, action in
+            guard let action else { return }
+            switch action {
+            case .addPerson:
+                if selectedPersonID == nil { showingAddPerson = true }
+            case .addMemory:
+                if selectedPersonID != nil { showingAddMemory = true }
+            case .addInteraction:
+                if selectedPersonID != nil { showingAddInteraction = true }
+            case .editPerson:
+                if selectedPersonID != nil { showingEditPerson = true }
+            case .changeTheme:
+                showingThemePicker = true
+            case .goBack:
+                if selectedPersonID != nil {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { selectedPersonID = nil }
+                }
+            }
         }
         .onAppear { store.load() }
     }

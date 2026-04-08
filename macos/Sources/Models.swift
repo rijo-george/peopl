@@ -5,8 +5,8 @@ import Foundation
 
 struct NamedDate: Codable, Identifiable, Hashable {
     var id: String
-    var label: String   // "Anniversary", "Work start date"
-    var date: String    // "MM-dd" (recurring) or "yyyy-MM-dd" (one-time)
+    var label: String
+    var date: String
 }
 
 struct Person: Codable, Identifiable, Hashable {
@@ -17,7 +17,7 @@ struct Person: Codable, Identifiable, Hashable {
     var phone: String
     var tags: [String]
     var notes: String
-    var birthday: String    // "MM-dd" format, empty if unknown
+    var birthday: String
     var dates: [NamedDate]
     var created_at: String
     var archived: Bool
@@ -53,9 +53,58 @@ struct Interaction: Codable, Identifiable, Hashable {
     }
 }
 
+// MARK: - Memory
+
+struct Memory: Codable, Identifiable, Hashable {
+    var id: String
+    var person_id: String
+    var type: String            // "text", "voice", "image"
+    var text: String            // content for text, caption for voice/image
+    var media_filename: String  // "memories/abc.m4a" or ".jpg", empty for text
+    var created_at: String
+    var color: String           // "yellow", "pink", "blue", "green", "plain"
+
+    var relativeTime: String {
+        guard let d = ISO8601Flexible.date(from: created_at) else { return "" }
+        let seconds = Date().timeIntervalSince(d)
+        if seconds < 60 { return "just now" }
+        if seconds < 3600 { return "\(Int(seconds / 60))m ago" }
+        if seconds < 86400 { return "\(Int(seconds / 3600))h ago" }
+        let days = Int(seconds / 86400)
+        if days == 1 { return "yesterday" }
+        if days < 30 { return "\(days)d ago" }
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMM d"
+        return fmt.string(from: d)
+    }
+
+    var dateDisplay: String {
+        guard let d = ISO8601Flexible.date(from: created_at) else { return "-" }
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMM d, yyyy"
+        return fmt.string(from: d)
+    }
+}
+
+// MARK: - Top-level data container
+
 struct PeoplData: Codable {
     var people: [Person]
     var interactions: [Interaction]
+    var memories: [Memory]
+
+    init(people: [Person] = [], interactions: [Interaction] = [], memories: [Memory] = []) {
+        self.people = people
+        self.interactions = interactions
+        self.memories = memories
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        people = try container.decode([Person].self, forKey: .people)
+        interactions = try container.decode([Interaction].self, forKey: .interactions)
+        memories = try container.decodeIfPresent([Memory].self, forKey: .memories) ?? []
+    }
 }
 
 // MARK: - Channel helpers
@@ -119,11 +168,11 @@ enum Weather: Comparable {
 
     var colorRGB: (r: Double, g: Double, b: Double) {
         switch self {
-        case .sunny:        return (1.00, 0.85, 0.20)  // yellow
-        case .partlyCloudy: return (0.70, 0.70, 0.60)  // warm gray
-        case .cloudy:       return (0.55, 0.60, 0.70)   // cool gray
-        case .rainy:        return (0.30, 0.55, 0.85)   // blue
-        case .stormy:       return (0.55, 0.30, 0.75)   // purple
+        case .sunny:        return (1.00, 0.85, 0.20)
+        case .partlyCloudy: return (0.70, 0.70, 0.60)
+        case .cloudy:       return (0.55, 0.60, 0.70)
+        case .rainy:        return (0.30, 0.55, 0.85)
+        case .stormy:       return (0.55, 0.30, 0.75)
         }
     }
 
@@ -137,16 +186,42 @@ enum Weather: Comparable {
     }
 }
 
+// MARK: - Memory color helpers
+
+enum MemoryColor: String, CaseIterable, Identifiable {
+    case yellow, pink, blue, green, plain
+
+    var id: String { rawValue }
+
+    var displayColor: (r: Double, g: Double, b: Double, a: Double) {
+        switch self {
+        case .yellow: return (1.00, 0.95, 0.75, 0.6)
+        case .pink:   return (1.00, 0.85, 0.88, 0.6)
+        case .blue:   return (0.82, 0.90, 1.00, 0.6)
+        case .green:  return (0.85, 0.96, 0.85, 0.6)
+        case .plain:  return (0.0, 0.0, 0.0, 0.0)
+        }
+    }
+}
+
 // MARK: - Upcoming dates helper
 
 struct UpcomingEvent: Identifiable {
     var id: String { "\(personID)-\(label)-\(monthDay)" }
     var personID: String
     var personName: String
-    var label: String       // "Birthday" or custom label
-    var monthDay: String    // "MM-dd"
+    var label: String
+    var monthDay: String
     var daysUntil: Int
     var isBirthday: Bool
+}
+
+// MARK: - Stable random from ID
+
+func stableRandom(from id: String, range: ClosedRange<Double> = -2.0...2.0) -> Double {
+    let hash = abs(id.hashValue)
+    let normalized = Double(hash % 10000) / 10000.0
+    return range.lowerBound + normalized * (range.upperBound - range.lowerBound)
 }
 
 // MARK: - Flexible ISO parser
@@ -222,18 +297,13 @@ enum StorageLocation {
     private static func setupSymlink(fm: FileManager, target: URL) {
         let linkPath = localDir.path
         let targetPath = target.path
-
-        if let dest = try? fm.destinationOfSymbolicLink(atPath: linkPath), dest == targetPath {
-            return
-        }
-
+        if let dest = try? fm.destinationOfSymbolicLink(atPath: linkPath), dest == targetPath { return }
         if fm.fileExists(atPath: linkPath) {
             let attrs = try? fm.attributesOfItem(atPath: linkPath)
             if attrs?[.type] as? FileAttributeType == .typeSymbolicLink {
                 try? fm.removeItem(atPath: linkPath)
             }
         }
-
         if !fm.fileExists(atPath: linkPath) {
             try? fm.createSymbolicLink(atPath: linkPath, withDestinationPath: targetPath)
         }
@@ -245,15 +315,19 @@ enum StorageLocation {
 class PeoplStore: ObservableObject {
     @Published var data: PeoplData
 
-    private let dataDir: URL
+    let dataDir: URL
     private let dataFile: URL
     private var fileMonitor: DispatchSourceFileSystemObject?
     private var fileDescriptor: Int32 = -1
 
+    var memoriesDir: URL { dataDir.appendingPathComponent("memories") }
+
     init() {
         dataDir = StorageLocation.resolve()
         dataFile = dataDir.appendingPathComponent("data.json")
-        data = PeoplData(people: [], interactions: [])
+        data = PeoplData()
+        try? FileManager.default.createDirectory(at: dataDir.appendingPathComponent("memories"),
+                                                  withIntermediateDirectories: true)
         coordinatedLoad()
         startFileMonitor()
 
@@ -294,7 +368,6 @@ class PeoplStore: ObservableObject {
     func save() {
         let coordinator = NSFileCoordinator()
         var coordError: NSError?
-
         coordinator.coordinate(readingItemAt: dataFile, options: [],
                                writingItemAt: dataFile, options: .forReplacing,
                                error: &coordError) { readURL, writeURL in
@@ -303,31 +376,30 @@ class PeoplStore: ObservableObject {
                let disk = try? JSONDecoder().decode(PeoplData.self, from: raw) {
                 merged = Self.merge(local: self.data, remote: disk)
             }
-
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             guard let raw = try? encoder.encode(merged) else { return }
             try? raw.write(to: writeURL, options: .atomic)
-
             DispatchQueue.main.async {
                 self.data = merged
             }
         }
     }
 
-    // MARK: - Merge logic (union by ID)
+    // MARK: - Merge logic
 
     private static func merge(local: PeoplData, remote: PeoplData) -> PeoplData {
         PeoplData(
             people: mergeByID(local: local.people, remote: remote.people),
-            interactions: mergeByID(local: local.interactions, remote: remote.interactions)
+            interactions: mergeByID(local: local.interactions, remote: remote.interactions),
+            memories: mergeByID(local: local.memories, remote: remote.memories)
         )
     }
 
     private static func mergeByID<T: Identifiable & Codable>(local: [T], remote: [T]) -> [T] where T.ID == String {
         var byID: [String: T] = [:]
         for item in remote { byID[item.id] = item }
-        for item in local { byID[item.id] = item } // local wins
+        for item in local { byID[item.id] = item }
         var result: [T] = []
         var seen = Set<String>()
         for item in local {
@@ -341,7 +413,7 @@ class PeoplStore: ObservableObject {
 
     private static func dataEqual(_ a: PeoplData, _ b: PeoplData) -> Bool {
         let ids = { (d: PeoplData) in
-            Set(d.people.map(\.id) + d.interactions.map(\.id))
+            Set(d.people.map(\.id) + d.interactions.map(\.id) + d.memories.map(\.id))
         }
         return ids(a) == ids(b)
     }
@@ -351,7 +423,6 @@ class PeoplStore: ObservableObject {
     private func startFileMonitor() {
         fileMonitor?.cancel()
         fileMonitor = nil
-
         let fd = open(dataFile.path, O_EVTONLY)
         guard fd >= 0 else { return }
         fileDescriptor = fd
@@ -372,8 +443,7 @@ class PeoplStore: ObservableObject {
     func addPerson(name: String, company: String, email: String, phone: String,
                    tags: [String], notes: String, birthday: String, dates: [NamedDate]) {
         let person = Person(
-            id: UUID().uuidString,
-            name: name, company: company, email: email, phone: phone,
+            id: UUID().uuidString, name: name, company: company, email: email, phone: phone,
             tags: tags, notes: notes, birthday: birthday, dates: dates,
             created_at: pythonISO(), archived: false
         )
@@ -406,11 +476,8 @@ class PeoplStore: ObservableObject {
 
     func addInteraction(personID: String, channel: String, note: String, date: Date = Date()) {
         let interaction = Interaction(
-            id: UUID().uuidString,
-            person_id: personID,
-            date: pythonISO(date),
-            channel: channel,
-            note: note
+            id: UUID().uuidString, person_id: personID,
+            date: pythonISO(date), channel: channel, note: note
         )
         data.interactions.append(interaction)
         save()
@@ -421,12 +488,90 @@ class PeoplStore: ObservableObject {
         save()
     }
 
+    // MARK: - Memory actions
+
+    func addTextMemory(personID: String, text: String, color: String) {
+        let memory = Memory(
+            id: UUID().uuidString, person_id: personID, type: "text",
+            text: text, media_filename: "", created_at: pythonISO(), color: color
+        )
+        data.memories.append(memory)
+        save()
+    }
+
+    func saveImageMemory(personID: String, image: NSImage, caption: String, color: String) {
+        let memID = UUID().uuidString
+        let filename = "memories/\(memID).jpg"
+        let fileURL = dataDir.appendingPathComponent(filename)
+
+        guard let tiffData = image.tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiffData),
+              let jpegData = rep.representation(using: .jpeg, properties: [.compressionFactor: 0.85])
+        else { return }
+
+        try? jpegData.write(to: fileURL, options: .atomic)
+
+        let memory = Memory(
+            id: memID, person_id: personID, type: "image",
+            text: caption, media_filename: filename, created_at: pythonISO(), color: color
+        )
+        data.memories.append(memory)
+        save()
+    }
+
+    func saveVoiceMemory(personID: String, audioURL: URL, caption: String, color: String) {
+        let memID = UUID().uuidString
+        let filename = "memories/\(memID).m4a"
+        let destURL = dataDir.appendingPathComponent(filename)
+
+        try? FileManager.default.copyItem(at: audioURL, to: destURL)
+
+        let memory = Memory(
+            id: memID, person_id: personID, type: "voice",
+            text: caption, media_filename: filename, created_at: pythonISO(), color: color
+        )
+        data.memories.append(memory)
+        save()
+    }
+
+    func deleteMemory(_ memory: Memory) {
+        if !memory.media_filename.isEmpty {
+            let fileURL = dataDir.appendingPathComponent(memory.media_filename)
+            try? FileManager.default.removeItem(at: fileURL)
+        }
+        data.memories.removeAll { $0.id == memory.id }
+        save()
+    }
+
+    func mediaURL(for memory: Memory) -> URL? {
+        guard !memory.media_filename.isEmpty else { return nil }
+        let url = dataDir.appendingPathComponent(memory.media_filename)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+
     // MARK: - Queries
+
+    func memories(for personID: String) -> [Memory] {
+        data.memories
+            .filter { $0.person_id == personID }
+            .sorted { $0.created_at > $1.created_at }
+    }
+
+    func latestMemorySnippet(for personID: String) -> String? {
+        let mems = memories(for: personID)
+        if let textMem = mems.first(where: { $0.type == "text" }) {
+            return String(textMem.text.prefix(80))
+        }
+        if let captionMem = mems.first(where: { !$0.text.isEmpty }) {
+            return String(captionMem.text.prefix(80))
+        }
+        return nil
+    }
 
     func interactions(for personID: String) -> [Interaction] {
         data.interactions
             .filter { $0.person_id == personID }
-            .sorted { ($0.date) > ($1.date) }
+            .sorted { $0.date > $1.date }
     }
 
     func lastInteraction(for personID: String) -> Interaction? {
@@ -461,9 +606,7 @@ class PeoplStore: ObservableObject {
         let daysInYear = cal.range(of: .day, in: .year, for: today)?.count ?? 365
 
         var events: [UpcomingEvent] = []
-
         for person in activePeople {
-            // Birthday
             if !person.birthday.isEmpty, let md = parseMonthDay(person.birthday) {
                 if let daysUntil = daysUntilDate(month: md.month, day: md.day,
                                                    todayComponents: todayComponents,
@@ -477,8 +620,6 @@ class PeoplStore: ObservableObject {
                     ))
                 }
             }
-
-            // Custom dates
             for nd in person.dates {
                 if let md = parseMonthDay(nd.date),
                    let daysUntil = daysUntilDate(month: md.month, day: md.day,
@@ -494,19 +635,13 @@ class PeoplStore: ObservableObject {
                 }
             }
         }
-
         return events.sorted { $0.daysUntil < $1.daysUntil }
     }
 
     private func parseMonthDay(_ string: String) -> (month: Int, day: Int)? {
         let parts = string.split(separator: "-")
-        // Handle "MM-dd" or "yyyy-MM-dd"
-        if parts.count == 2, let m = Int(parts[0]), let d = Int(parts[1]) {
-            return (m, d)
-        }
-        if parts.count == 3, let m = Int(parts[1]), let d = Int(parts[2]) {
-            return (m, d)
-        }
+        if parts.count == 2, let m = Int(parts[0]), let d = Int(parts[1]) { return (m, d) }
+        if parts.count == 3, let m = Int(parts[1]), let d = Int(parts[2]) { return (m, d) }
         return nil
     }
 
@@ -522,7 +657,6 @@ class PeoplStore: ObservableObject {
         comps.day = day
         guard let targetThisYear = cal.date(from: comps) else { return nil }
         let targetDay = cal.ordinality(of: .day, in: .year, for: targetThisYear) ?? 1
-
         var diff = targetDay - todayDayOfYear
         if diff < 0 { diff += daysInYear }
         return diff
@@ -530,7 +664,7 @@ class PeoplStore: ObservableObject {
 
     // MARK: Helpers
 
-    private func pythonISO(_ date: Date = Date()) -> String {
+    func pythonISO(_ date: Date = Date()) -> String {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"

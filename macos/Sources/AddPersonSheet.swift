@@ -13,82 +13,87 @@ struct AddPersonSheet: View {
     @State private var birthday = ""
     @State private var notes = ""
 
+    private var tc: ThemeColors { theme.colors }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 18) {
             HStack {
                 Image(systemName: "person.badge.plus")
-                    .foregroundColor(theme.colors.accent)
-                Text("Add Person")
-                    .font(.headline)
+                    .foregroundColor(tc.warmAccent)
+                Text("New Person")
+                    .font(.system(size: 16, weight: .semibold, design: .serif))
             }
+
+            journalField("Name", text: $name, placeholder: "Jane Smith")
+
+            HStack(spacing: 16) {
+                journalField("Company / Context", text: $company, placeholder: "Acme Corp, yoga class")
+                journalField("Birthday", text: $birthday, placeholder: "MM-DD")
+                    .frame(width: 100)
+            }
+
+            HStack(spacing: 16) {
+                journalField("Email", text: $email, placeholder: "email@example.com")
+                journalField("Phone", text: $phone, placeholder: "+1 555-1234")
+            }
+
+            journalField("Tags", text: $tagsText, placeholder: "work, seattle, mentor (comma separated)")
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Name *").font(.caption).foregroundColor(.secondary)
-                TextField("e.g. Jane Smith", text: $name)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Company / Context").font(.caption).foregroundColor(.secondary)
-                    TextField("e.g. Acme Corp, yoga class", text: $company)
-                        .textFieldStyle(.roundedBorder)
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Birthday (MM-DD)").font(.caption).foregroundColor(.secondary)
-                    TextField("e.g. 03-15", text: $birthday)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 100)
-                }
-            }
-
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Email").font(.caption).foregroundColor(.secondary)
-                    TextField("email@example.com", text: $email)
-                        .textFieldStyle(.roundedBorder)
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Phone").font(.caption).foregroundColor(.secondary)
-                    TextField("+1 555-1234", text: $phone)
-                        .textFieldStyle(.roundedBorder)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Tags (comma separated)").font(.caption).foregroundColor(.secondary)
-                TextField("e.g. work, seattle, mentor", text: $tagsText)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Notes").font(.caption).foregroundColor(.secondary)
-                TextField("anything you want to remember", text: $notes)
-                    .textFieldStyle(.roundedBorder)
+                Text("Notes")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundColor(tc.textSecondary)
+                TextEditor(text: $notes)
+                    .font(.system(size: 14, design: .serif))
+                    .frame(height: 50)
+                    .padding(6)
+                    .background(tc.memoryTint)
+                    .cornerRadius(4)
+                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(tc.borderInactive))
             }
 
             HStack {
                 Spacer()
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button("Add") { addPerson() }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .foregroundColor(tc.textSecondary)
+                Button(action: addPerson) {
+                    Text("Add")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 6)
+                        .background(name.trimmingCharacters(in: .whitespaces).isEmpty ? tc.textSecondary.opacity(0.3) : tc.warmAccent)
+                        .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut(.defaultAction)
+                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
         .padding(24)
-        .frame(width: 460)
+        .frame(width: 480)
+    }
+
+    private func journalField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .foregroundColor(tc.textSecondary)
+            TextField(placeholder, text: text)
+                .textFieldStyle(.plain)
+                .font(.system(size: 14, design: .serif))
+                .padding(.vertical, 6)
+                .overlay(alignment: .bottom) {
+                    Rectangle().fill(tc.borderInactive).frame(height: 1)
+                }
+        }
     }
 
     private func addPerson() {
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         guard !trimmedName.isEmpty else { return }
-
-        let tags = tagsText
-            .split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
-
+        let tags = tagsText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
         store.addPerson(
             name: trimmedName,
             company: company.trimmingCharacters(in: .whitespaces),

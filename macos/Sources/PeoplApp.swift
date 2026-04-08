@@ -10,9 +10,9 @@ struct PeoplApp: App {
             ContentView()
                 .environmentObject(store)
                 .environmentObject(theme)
-                .frame(minWidth: 800, minHeight: 500)
+                .frame(minWidth: 900, minHeight: 600)
         }
         .windowStyle(.titleBar)
-        .defaultSize(width: 960, height: 640)
+        .defaultSize(width: 1080, height: 720)
     }
 }

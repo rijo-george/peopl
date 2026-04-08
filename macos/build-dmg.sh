@@ -6,7 +6,7 @@ cd "$SCRIPT_DIR"
 
 APP_NAME="Peopl"
 DMG_NAME="Peopl"
-VERSION="1.0.0"
+VERSION="2.0.0"
 DMG_FINAL="$SCRIPT_DIR/$DMG_NAME-$VERSION.dmg"
 DMG_TEMP="$SCRIPT_DIR/_dmg_temp.dmg"
 STAGING="$SCRIPT_DIR/_dmg_staging"

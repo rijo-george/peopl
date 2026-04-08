@@ -18,77 +18,61 @@ struct EditPersonSheet: View {
     @State private var newDateLabel = ""
     @State private var newDateValue = ""
 
+    private var tc: ThemeColors { theme.colors }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 18) {
             HStack {
                 Image(systemName: "pencil.circle.fill")
-                    .foregroundColor(theme.colors.accent)
+                    .foregroundColor(tc.warmAccent)
                 Text("Edit Person")
-                    .font(.headline)
+                    .font(.system(size: 16, weight: .semibold, design: .serif))
             }
+
+            journalField("Name", text: $name, placeholder: "Name")
+
+            HStack(spacing: 16) {
+                journalField("Company / Context", text: $company, placeholder: "Company")
+                journalField("Birthday", text: $birthday, placeholder: "MM-DD")
+                    .frame(width: 100)
+            }
+
+            HStack(spacing: 16) {
+                journalField("Email", text: $email, placeholder: "Email")
+                journalField("Phone", text: $phone, placeholder: "Phone")
+            }
+
+            journalField("Tags", text: $tagsText, placeholder: "comma separated tags")
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Name *").font(.caption).foregroundColor(.secondary)
-                TextField("Name", text: $name)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Company / Context").font(.caption).foregroundColor(.secondary)
-                    TextField("Company", text: $company)
-                        .textFieldStyle(.roundedBorder)
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Birthday (MM-DD)").font(.caption).foregroundColor(.secondary)
-                    TextField("e.g. 03-15", text: $birthday)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 100)
-                }
-            }
-
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Email").font(.caption).foregroundColor(.secondary)
-                    TextField("Email", text: $email)
-                        .textFieldStyle(.roundedBorder)
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Phone").font(.caption).foregroundColor(.secondary)
-                    TextField("Phone", text: $phone)
-                        .textFieldStyle(.roundedBorder)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Tags (comma separated)").font(.caption).foregroundColor(.secondary)
-                TextField("Tags", text: $tagsText)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Notes").font(.caption).foregroundColor(.secondary)
+                Text("Notes")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundColor(tc.textSecondary)
                 TextEditor(text: $notes)
-                    .font(.system(size: 13))
+                    .font(.system(size: 14, design: .serif))
                     .frame(height: 60)
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.gray.opacity(0.3)))
+                    .padding(6)
+                    .background(tc.memoryTint)
+                    .cornerRadius(4)
+                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(tc.borderInactive))
             }
 
             // Custom dates
-            VStack(alignment: .leading, spacing: 4) {
-                Text("CUSTOM DATES")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(.secondary)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Custom Dates")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundColor(tc.textSecondary)
 
                 ForEach(dates) { nd in
                     HStack {
                         Text("\(nd.label): \(nd.date)")
-                            .font(.system(size: 12))
+                            .font(.system(size: 12, design: .serif))
+                            .foregroundColor(tc.textPrimary)
                         Spacer()
                         Button(action: { dates.removeAll { $0.id == nd.id } }) {
                             Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
+                                .font(.system(size: 11))
+                                .foregroundColor(tc.textSecondary.opacity(0.5))
                         }
                         .buttonStyle(.plain)
                     }
@@ -96,10 +80,16 @@ struct EditPersonSheet: View {
 
                 HStack(spacing: 8) {
                     TextField("Label", text: $newDateLabel)
-                        .textFieldStyle(.roundedBorder)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12, design: .serif))
+                        .padding(.vertical, 4)
+                        .overlay(alignment: .bottom) { Rectangle().fill(tc.borderInactive).frame(height: 1) }
                         .frame(width: 140)
                     TextField("MM-DD", text: $newDateValue)
-                        .textFieldStyle(.roundedBorder)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12, design: .monospaced))
+                        .padding(.vertical, 4)
+                        .overlay(alignment: .bottom) { Rectangle().fill(tc.borderInactive).frame(height: 1) }
                         .frame(width: 80)
                     Button("Add") {
                         let label = newDateLabel.trimmingCharacters(in: .whitespaces)
@@ -109,8 +99,9 @@ struct EditPersonSheet: View {
                         newDateLabel = ""
                         newDateValue = ""
                     }
-                    .disabled(newDateLabel.trimmingCharacters(in: .whitespaces).isEmpty ||
-                              newDateValue.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(tc.warmAccent)
+                    .disabled(newDateLabel.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
 
@@ -118,13 +109,23 @@ struct EditPersonSheet: View {
                 Spacer()
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button("Save") { savePerson() }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .foregroundColor(tc.textSecondary)
+                Button(action: savePerson) {
+                    Text("Save")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 6)
+                        .background(tc.warmAccent)
+                        .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut(.defaultAction)
+                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
         .padding(24)
-        .frame(width: 460)
+        .frame(width: 480)
         .onAppear {
             name = person.name
             company = person.company
@@ -137,15 +138,25 @@ struct EditPersonSheet: View {
         }
     }
 
+    private func journalField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .foregroundColor(tc.textSecondary)
+            TextField(placeholder, text: text)
+                .textFieldStyle(.plain)
+                .font(.system(size: 14, design: .serif))
+                .padding(.vertical, 6)
+                .overlay(alignment: .bottom) {
+                    Rectangle().fill(tc.borderInactive).frame(height: 1)
+                }
+        }
+    }
+
     private func savePerson() {
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         guard !trimmedName.isEmpty else { return }
-
-        let tags = tagsText
-            .split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
-
+        let tags = tagsText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
         var updated = person
         updated.name = trimmedName
         updated.company = company.trimmingCharacters(in: .whitespaces)
@@ -155,7 +166,6 @@ struct EditPersonSheet: View {
         updated.notes = notes.trimmingCharacters(in: .whitespaces)
         updated.birthday = birthday.trimmingCharacters(in: .whitespaces)
         updated.dates = dates
-
         store.updatePerson(updated)
         dismiss()
     }

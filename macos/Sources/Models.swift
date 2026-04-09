@@ -9,6 +9,13 @@ struct NamedDate: Codable, Identifiable, Hashable {
     var date: String
 }
 
+struct PersonField: Codable, Identifiable, Hashable {
+    var id: String
+    var label: String
+    var value: String
+    var icon: String  // SF Symbol name
+}
+
 struct Person: Codable, Identifiable, Hashable {
     var id: String
     var name: String
@@ -21,6 +28,7 @@ struct Person: Codable, Identifiable, Hashable {
     var dates: [NamedDate]
     var created_at: String
     var archived: Bool
+    var details: [PersonField]
 
     var displayInitials: String {
         let parts = name.split(separator: " ")
@@ -28,6 +36,92 @@ struct Person: Codable, Identifiable, Hashable {
             return String(parts[0].prefix(1) + parts[1].prefix(1)).uppercased()
         }
         return String(name.prefix(2)).uppercased()
+    }
+
+    init(id: String, name: String, company: String, email: String, phone: String,
+         tags: [String], notes: String, birthday: String, dates: [NamedDate],
+         created_at: String, archived: Bool, details: [PersonField] = []) {
+        self.id = id; self.name = name; self.company = company; self.email = email
+        self.phone = phone; self.tags = tags; self.notes = notes; self.birthday = birthday
+        self.dates = dates; self.created_at = created_at; self.archived = archived
+        self.details = details
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        company = try c.decode(String.self, forKey: .company)
+        email = try c.decode(String.self, forKey: .email)
+        phone = try c.decode(String.self, forKey: .phone)
+        tags = try c.decode([String].self, forKey: .tags)
+        notes = try c.decode(String.self, forKey: .notes)
+        birthday = try c.decode(String.self, forKey: .birthday)
+        dates = try c.decode([NamedDate].self, forKey: .dates)
+        created_at = try c.decode(String.self, forKey: .created_at)
+        archived = try c.decode(Bool.self, forKey: .archived)
+        details = try c.decodeIfPresent([PersonField].self, forKey: .details) ?? []
+    }
+}
+
+// MARK: - Suggested detail fields
+
+enum SuggestedField: String, CaseIterable {
+    case location, food, music, movies, books, hobbies
+    case pets, languages, socialMedia, relationship, howWeMet
+    case allergies, workplace, school, nickname, zodiac
+    case favoriteColor, sports, travel, drinks, restaurants
+
+    var label: String {
+        switch self {
+        case .location:     return "Location"
+        case .food:         return "Favorite Food"
+        case .music:        return "Music"
+        case .movies:       return "Movies"
+        case .books:        return "Books"
+        case .hobbies:      return "Hobbies"
+        case .pets:         return "Pets"
+        case .languages:    return "Languages"
+        case .socialMedia:  return "Social Media"
+        case .relationship: return "Relationship"
+        case .howWeMet:     return "How We Met"
+        case .allergies:    return "Allergies"
+        case .workplace:    return "Workplace"
+        case .school:       return "School"
+        case .nickname:     return "Nickname"
+        case .zodiac:       return "Zodiac Sign"
+        case .favoriteColor:return "Favorite Color"
+        case .sports:       return "Sports"
+        case .travel:       return "Travel"
+        case .drinks:       return "Drinks"
+        case .restaurants:  return "Restaurants"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .location:     return "mappin.circle.fill"
+        case .food:         return "fork.knife"
+        case .music:        return "music.note"
+        case .movies:       return "film.fill"
+        case .books:        return "book.fill"
+        case .hobbies:      return "star.fill"
+        case .pets:         return "pawprint.fill"
+        case .languages:    return "globe"
+        case .socialMedia:  return "at"
+        case .relationship: return "heart.fill"
+        case .howWeMet:     return "figure.2"
+        case .allergies:    return "exclamationmark.triangle.fill"
+        case .workplace:    return "building.2.fill"
+        case .school:       return "graduationcap.fill"
+        case .nickname:     return "person.text.rectangle.fill"
+        case .zodiac:       return "sparkles"
+        case .favoriteColor:return "paintpalette.fill"
+        case .sports:       return "sportscourt.fill"
+        case .travel:       return "airplane"
+        case .drinks:       return "cup.and.saucer.fill"
+        case .restaurants:  return "menucard.fill"
+        }
     }
 }
 
@@ -662,6 +756,105 @@ class PeoplStore: ObservableObject {
         return diff
     }
 
+    // MARK: - Nudge & Surfacing
+
+    func nudgePerson() -> (person: Person, daysSince: Int, lastSnippet: String?)? {
+        let candidates: [(Person, Int, Double)] = activePeople.compactMap { person in
+            guard let days = daysSinceLastInteraction(for: person.id), days >= 7 else { return nil }
+            let interactionCount = Double(interactions(for: person.id).count)
+            let memoryCount = Double(memories(for: person.id).count)
+            let score = Double(days) * sqrt(interactionCount + memoryCount + 1)
+            return (person, days, score)
+        }
+        guard let best = candidates.max(by: { $0.2 < $1.2 }) else { return nil }
+        let snippet: String? = latestMemorySnippet(for: best.0.id)
+            ?? lastInteraction(for: best.0.id).map { String($0.note.prefix(80)) }
+        return (person: best.0, daysSince: best.1, lastSnippet: snippet)
+    }
+
+    func surfaceMemory() -> (memory: Memory, person: Person, timeAgo: String)? {
+        let cal = Calendar.current
+        let todaySeed = cal.startOfDay(for: Date()).hashValue
+        var rng = SeededRNG(seed: UInt64(bitPattern: Int64(todaySeed)))
+
+        // 60% chance of returning nil
+        guard Double.random(in: 0...1, using: &rng) < 0.4 else { return nil }
+
+        let thirtyDaysAgo = cal.date(byAdding: .day, value: -30, to: Date())!
+        let oldMemories = data.memories.filter { mem in
+            guard let d = ISO8601Flexible.date(from: mem.created_at) else { return false }
+            return d < thirtyDaysAgo
+        }
+        guard !oldMemories.isEmpty else { return nil }
+
+        let idx = Int.random(in: 0..<oldMemories.count, using: &rng)
+        let memory = oldMemories[idx]
+        guard let person = data.people.first(where: { $0.id == memory.person_id }),
+              let memDate = ISO8601Flexible.date(from: memory.created_at) else { return nil }
+
+        let components = cal.dateComponents([.year, .month], from: memDate, to: Date())
+        let timeAgo: String
+        if let years = components.year, years >= 1 {
+            timeAgo = years == 1 ? "1 year ago" : "\(years) years ago"
+        } else if let months = components.month, months >= 1 {
+            timeAgo = months == 1 ? "1 month ago" : "\(months) months ago"
+        } else {
+            timeAgo = "a while ago"
+        }
+
+        return (memory: memory, person: person, timeAgo: timeAgo)
+    }
+
+    func fuzzyMatchPerson(query: String) -> Person? {
+        let q = query.lowercased().trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return nil }
+        // Prefix match
+        if let match = activePeople.first(where: { $0.name.lowercased().hasPrefix(q) }) { return match }
+        // Substring match
+        if let match = activePeople.first(where: { $0.name.lowercased().contains(q) }) { return match }
+        // First name match
+        if let match = activePeople.first(where: {
+            $0.name.split(separator: " ").first?.lowercased().hasPrefix(q) == true
+        }) { return match }
+        return nil
+    }
+
+    func parseQuickCapture(input: String) -> (personQuery: String?, text: String) {
+        if let range = input.range(of: " - ") {
+            let personQuery = String(input[input.startIndex..<range.lowerBound])
+            let text = String(input[range.upperBound...])
+            return (personQuery.isEmpty ? nil : personQuery, text)
+        }
+        return (nil, input)
+    }
+
+    // MARK: - Unified Timeline
+
+    enum TimelineItem: Identifiable {
+        case memory(Memory)
+        case interaction(Interaction)
+
+        var id: String {
+            switch self {
+            case .memory(let m): return "mem-\(m.id)"
+            case .interaction(let i): return "int-\(i.id)"
+            }
+        }
+
+        var sortDate: Date {
+            switch self {
+            case .memory(let m): return ISO8601Flexible.date(from: m.created_at) ?? Date.distantPast
+            case .interaction(let i): return ISO8601Flexible.date(from: i.date) ?? Date.distantPast
+            }
+        }
+    }
+
+    func interleaveTimeline(for personID: String) -> [TimelineItem] {
+        let mems = memories(for: personID).map { TimelineItem.memory($0) }
+        let ints = interactions(for: personID).map { TimelineItem.interaction($0) }
+        return (mems + ints).sorted { $0.sortDate > $1.sortDate }
+    }
+
     // MARK: Helpers
 
     func pythonISO(_ date: Date = Date()) -> String {
@@ -669,5 +862,23 @@ class PeoplStore: ObservableObject {
         f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
         return f.string(from: date)
+    }
+}
+
+// MARK: - Seeded RNG for deterministic daily randomness
+
+struct SeededRNG: RandomNumberGenerator {
+    private var state: UInt64
+
+    init(seed: UInt64) {
+        state = seed
+    }
+
+    mutating func next() -> UInt64 {
+        state &+= 0x9e3779b97f4a7c15
+        var z = state
+        z = (z ^ (z >> 30)) &* 0xbf58476d1ce4e5b9
+        z = (z ^ (z >> 27)) &* 0x94d049bb133111eb
+        return z ^ (z >> 31)
     }
 }

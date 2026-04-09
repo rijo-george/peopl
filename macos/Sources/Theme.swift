@@ -30,6 +30,15 @@ struct ThemeColors {
     let journalBg: Color
     let warmAccent: Color
     let memoryTint: Color
+
+    // v3: Living Memory Box
+    let grainOpacity: Double
+    let shadowWarm: Color
+    let nudgeGradientStart: Color
+    let nudgeGradientEnd: Color
+    let urgencyGlow: Color
+    let captureBarBg: Color
+    let surfacedMemoryBg: Color
 }
 
 enum ThemeName: String, CaseIterable, Identifiable {
@@ -85,7 +94,14 @@ enum ThemeName: String, CaseIterable, Identifiable {
                 cardShadow:     Color(r: 0.40, g: 0.30, b: 0.20).opacity(0.12),
                 journalBg:      Color(r: 0.97, g: 0.94, b: 0.89),
                 warmAccent:     Color(r: 0.85, g: 0.45, b: 0.15),
-                memoryTint:     Color(r: 0.95, g: 0.90, b: 0.82)
+                memoryTint:     Color(r: 0.95, g: 0.90, b: 0.82),
+                grainOpacity:   0.04,
+                shadowWarm:     Color(r: 0.40, g: 0.28, b: 0.15).opacity(0.15),
+                nudgeGradientStart: Color(r: 0.95, g: 0.75, b: 0.45),
+                nudgeGradientEnd:   Color(r: 0.96, g: 0.93, b: 0.88),
+                urgencyGlow:    Color(r: 0.85, g: 0.35, b: 0.45),
+                captureBarBg:   Color(r: 0.94, g: 0.90, b: 0.84),
+                surfacedMemoryBg: Color(r: 0.97, g: 0.93, b: 0.86)
             )
 
         case .dark:
@@ -110,7 +126,14 @@ enum ThemeName: String, CaseIterable, Identifiable {
                 cardShadow:     Color.black.opacity(0.3),
                 journalBg:      Color(r: 0.13, g: 0.13, b: 0.17),
                 warmAccent:     Color(r: 0.90, g: 0.50, b: 0.18),
-                memoryTint:     Color(r: 0.18, g: 0.17, b: 0.22)
+                memoryTint:     Color(r: 0.18, g: 0.17, b: 0.22),
+                grainOpacity:   0.03,
+                shadowWarm:     Color(r: 0.10, g: 0.08, b: 0.05).opacity(0.3),
+                nudgeGradientStart: Color(r: 0.90, g: 0.55, b: 0.20),
+                nudgeGradientEnd:   Color(r: 0.14, g: 0.14, b: 0.18),
+                urgencyGlow:    Color(r: 0.80, g: 0.30, b: 0.50),
+                captureBarBg:   Color(r: 0.16, g: 0.15, b: 0.20),
+                surfacedMemoryBg: Color(r: 0.20, g: 0.18, b: 0.25)
             )
 
         case .light:
@@ -135,7 +158,14 @@ enum ThemeName: String, CaseIterable, Identifiable {
                 cardShadow:     Color.black.opacity(0.08),
                 journalBg:      Color(r: 0.98, g: 0.97, b: 0.96),
                 warmAccent:     Color(r: 0.80, g: 0.42, b: 0.12),
-                memoryTint:     Color(r: 0.96, g: 0.95, b: 0.93)
+                memoryTint:     Color(r: 0.96, g: 0.95, b: 0.93),
+                grainOpacity:   0.03,
+                shadowWarm:     Color(r: 0.35, g: 0.25, b: 0.15).opacity(0.10),
+                nudgeGradientStart: Color(r: 0.90, g: 0.65, b: 0.30),
+                nudgeGradientEnd:   Color(r: 0.97, g: 0.97, b: 0.98),
+                urgencyGlow:    Color(r: 0.80, g: 0.35, b: 0.45),
+                captureBarBg:   Color(r: 0.95, g: 0.94, b: 0.93),
+                surfacedMemoryBg: Color(r: 0.96, g: 0.94, b: 0.91)
             )
 
         case .sunset:
@@ -160,7 +190,14 @@ enum ThemeName: String, CaseIterable, Identifiable {
                 cardShadow:     Color.black.opacity(0.3),
                 journalBg:      Color(r: 0.18, g: 0.12, b: 0.10),
                 warmAccent:     Color(r: 1.00, g: 0.55, b: 0.20),
-                memoryTint:     Color(r: 0.25, g: 0.18, b: 0.14)
+                memoryTint:     Color(r: 0.25, g: 0.18, b: 0.14),
+                grainOpacity:   0.05,
+                shadowWarm:     Color(r: 0.08, g: 0.05, b: 0.02).opacity(0.35),
+                nudgeGradientStart: Color(r: 1.00, g: 0.60, b: 0.25),
+                nudgeGradientEnd:   Color(r: 0.18, g: 0.12, b: 0.12),
+                urgencyGlow:    Color(r: 0.90, g: 0.30, b: 0.40),
+                captureBarBg:   Color(r: 0.20, g: 0.14, b: 0.12),
+                surfacedMemoryBg: Color(r: 0.25, g: 0.16, b: 0.14)
             )
 
         case .ocean:
@@ -185,7 +222,14 @@ enum ThemeName: String, CaseIterable, Identifiable {
                 cardShadow:     Color.black.opacity(0.3),
                 journalBg:      Color(r: 0.09, g: 0.14, b: 0.20),
                 warmAccent:     Color(r: 0.90, g: 0.55, b: 0.20),
-                memoryTint:     Color(r: 0.12, g: 0.18, b: 0.26)
+                memoryTint:     Color(r: 0.12, g: 0.18, b: 0.26),
+                grainOpacity:   0.04,
+                shadowWarm:     Color(r: 0.05, g: 0.08, b: 0.12).opacity(0.35),
+                nudgeGradientStart: Color(r: 0.90, g: 0.60, b: 0.25),
+                nudgeGradientEnd:   Color(r: 0.10, g: 0.15, b: 0.22),
+                urgencyGlow:    Color(r: 0.75, g: 0.30, b: 0.55),
+                captureBarBg:   Color(r: 0.12, g: 0.17, b: 0.25),
+                surfacedMemoryBg: Color(r: 0.14, g: 0.20, b: 0.30)
             )
 
         case .forest:
@@ -210,7 +254,14 @@ enum ThemeName: String, CaseIterable, Identifiable {
                 cardShadow:     Color.black.opacity(0.25),
                 journalBg:      Color(r: 0.11, g: 0.16, b: 0.11),
                 warmAccent:     Color(r: 0.85, g: 0.55, b: 0.20),
-                memoryTint:     Color(r: 0.15, g: 0.22, b: 0.15)
+                memoryTint:     Color(r: 0.15, g: 0.22, b: 0.15),
+                grainOpacity:   0.05,
+                shadowWarm:     Color(r: 0.06, g: 0.08, b: 0.04).opacity(0.30),
+                nudgeGradientStart: Color(r: 0.85, g: 0.60, b: 0.25),
+                nudgeGradientEnd:   Color(r: 0.12, g: 0.18, b: 0.12),
+                urgencyGlow:    Color(r: 0.75, g: 0.35, b: 0.45),
+                captureBarBg:   Color(r: 0.14, g: 0.20, b: 0.14),
+                surfacedMemoryBg: Color(r: 0.16, g: 0.24, b: 0.16)
             )
 
         case .rose:
@@ -235,7 +286,14 @@ enum ThemeName: String, CaseIterable, Identifiable {
                 cardShadow:     Color.black.opacity(0.25),
                 journalBg:      Color(r: 0.16, g: 0.11, b: 0.16),
                 warmAccent:     Color(r: 0.90, g: 0.45, b: 0.55),
-                memoryTint:     Color(r: 0.22, g: 0.15, b: 0.22)
+                memoryTint:     Color(r: 0.22, g: 0.15, b: 0.22),
+                grainOpacity:   0.04,
+                shadowWarm:     Color(r: 0.10, g: 0.05, b: 0.08).opacity(0.30),
+                nudgeGradientStart: Color(r: 0.90, g: 0.50, b: 0.60),
+                nudgeGradientEnd:   Color(r: 0.18, g: 0.12, b: 0.18),
+                urgencyGlow:    Color(r: 0.85, g: 0.30, b: 0.50),
+                captureBarBg:   Color(r: 0.20, g: 0.14, b: 0.20),
+                surfacedMemoryBg: Color(r: 0.24, g: 0.16, b: 0.24)
             )
         }
     }

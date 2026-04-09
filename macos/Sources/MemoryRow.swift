@@ -38,7 +38,7 @@ struct MemoryRow: View {
                 Spacer()
                 Text(memory.relativeTime)
                     .font(.system(size: 9, design: .monospaced))
-                    .foregroundColor(tc.textSecondary.opacity(0.6))
+                    .foregroundColor(tc.textSecondary.opacity(0.4))
                 if isHovered, let onDelete {
                     Button(action: onDelete) {
                         Image(systemName: "xmark.circle.fill")
@@ -53,7 +53,7 @@ struct MemoryRow: View {
         .padding(16)
         .background(memoryColorBg)
         .cornerRadius(4)
-        .shadow(color: tc.cardShadow, radius: isHovered ? 8 : 3, y: isHovered ? 4 : 2)
+        .shadow(color: tc.shadowWarm, radius: isHovered ? 8 : 3, y: isHovered ? 4 : 2)
         .rotationEffect(.degrees(isHovered ? 0 : rotation))
         .scaleEffect(isHovered ? 1.02 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
@@ -108,16 +108,10 @@ struct MemoryRow: View {
             }
 
             HStack {
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 8))
-                    .foregroundColor(tc.textSecondary.opacity(0.4))
-                Text("voice memo")
-                    .font(.system(size: 9, design: .monospaced))
-                    .foregroundColor(tc.textSecondary.opacity(0.4))
                 Spacer()
                 Text(memory.relativeTime)
                     .font(.system(size: 9, design: .monospaced))
-                    .foregroundColor(tc.textSecondary.opacity(0.6))
+                    .foregroundColor(tc.textSecondary.opacity(0.4))
                 if isHovered, let onDelete {
                     Button(action: onDelete) {
                         Image(systemName: "xmark.circle.fill")
@@ -132,7 +126,7 @@ struct MemoryRow: View {
         .padding(16)
         .background(memoryColorBg)
         .cornerRadius(4)
-        .shadow(color: tc.cardShadow, radius: isHovered ? 8 : 3, y: isHovered ? 4 : 2)
+        .shadow(color: tc.shadowWarm, radius: isHovered ? 8 : 3, y: isHovered ? 4 : 2)
         .rotationEffect(.degrees(isHovered ? 0 : rotation))
         .scaleEffect(isHovered ? 1.02 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
@@ -175,7 +169,7 @@ struct MemoryRow: View {
                     Spacer()
                     Text(memory.relativeTime)
                         .font(.system(size: 9, design: .monospaced))
-                        .foregroundColor(tc.textSecondary.opacity(0.6))
+                        .foregroundColor(tc.textSecondary.opacity(0.4))
                     if isHovered, let onDelete {
                         Button(action: onDelete) {
                             Image(systemName: "xmark.circle.fill")
@@ -193,7 +187,7 @@ struct MemoryRow: View {
         .padding(6)
         .background(tc.cardBg)
         .cornerRadius(4)
-        .shadow(color: tc.cardShadow, radius: isHovered ? 10 : 4, y: isHovered ? 5 : 2)
+        .shadow(color: tc.shadowWarm, radius: isHovered ? 10 : 4, y: isHovered ? 5 : 2)
         .rotationEffect(.degrees(isHovered ? 0 : rotation))
         .scaleEffect(isHovered ? 1.02 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)

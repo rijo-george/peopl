@@ -25,7 +25,7 @@ struct EditPersonSheet: View {
             HStack {
                 Image(systemName: "pencil.circle.fill")
                     .foregroundColor(tc.warmAccent)
-                Text("Edit Person")
+                Text("Edit \(person.name)")
                     .font(.system(size: 16, weight: .semibold, design: .serif))
             }
 

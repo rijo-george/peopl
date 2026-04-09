@@ -18,7 +18,7 @@ struct AddInteractionSheet: View {
             HStack {
                 Image(systemName: "bubble.left.fill")
                     .foregroundColor(tc.warmAccent)
-                Text("Log Interaction")
+                Text("We talked")
                     .font(.system(size: 16, weight: .semibold, design: .serif))
                 Spacer()
                 Text("with \(person.name)")
@@ -72,7 +72,7 @@ struct AddInteractionSheet: View {
 
             // Note
             VStack(alignment: .leading, spacing: 4) {
-                Text("What happened?")
+                Text("What did you talk about?")
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundColor(tc.textSecondary)
                 TextField("Caught up about her new role...", text: $note)

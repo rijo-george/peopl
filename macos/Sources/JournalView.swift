@@ -10,7 +10,6 @@ struct JournalView: View {
     @Binding var showingAddInteraction: Bool
     @Binding var showingEditPerson: Bool
 
-    @State private var showInteractions = false
     @State private var memoryToDelete: Memory?
 
     private var tc: ThemeColors { theme.colors }
@@ -20,21 +19,21 @@ struct JournalView: View {
             tc.bg.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Journal header
                 journalHeader
 
-                // Memory train + interactions
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        memoryTrain
-                            .padding(.horizontal, 40)
-                            .padding(.top, 20)
+                // Two-column layout
+                HStack(spacing: 0) {
+                    // Left: timeline
+                    leftColumn
 
-                        interactionSection
-                            .padding(.horizontal, 40)
-                            .padding(.top, 24)
-                            .padding(.bottom, 80)
-                    }
+                    // Divider
+                    Rectangle()
+                        .fill(tc.borderInactive)
+                        .frame(width: 1)
+
+                    // Right: details
+                    PersonDetailsPanel(person: person)
+                        .frame(width: 300)
                 }
             }
 
@@ -53,7 +52,7 @@ struct JournalView: View {
                                 .clipShape(Circle())
                         }
                         .buttonStyle(.plain)
-                        .help("Log interaction (Cmd+Shift+I)")
+                        .help("We talked (Cmd+Shift+I)")
 
                         Button(action: { showingAddMemory = true }) {
                             Image(systemName: "brain.filled.head.profile")
@@ -65,7 +64,7 @@ struct JournalView: View {
                                 .shadow(color: tc.warmAccent.opacity(0.4), radius: 8, y: 4)
                         }
                         .buttonStyle(.plain)
-                        .help("Add memory (Cmd+Shift+M)")
+                        .help("I want to remember... (Cmd+Shift+M)")
                     }
                     .padding(.trailing, 28)
                     .padding(.bottom, 24)
@@ -86,12 +85,30 @@ struct JournalView: View {
         }
     }
 
-    // MARK: - Journal Header
+    // MARK: - Left Column (timeline)
+
+    private var leftColumn: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                if !person.notes.isEmpty {
+                    pinnedNotes
+                        .padding(.horizontal, 32)
+                        .padding(.top, 16)
+                }
+
+                timelineContent
+                    .padding(.horizontal, 32)
+                    .padding(.top, 16)
+                    .padding(.bottom, 80)
+            }
+        }
+    }
+
+    // MARK: - Journal Header (compact)
 
     private var journalHeader: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .top) {
-                // Back button
+            HStack(alignment: .center) {
                 Button(action: onBack) {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
@@ -105,7 +122,6 @@ struct JournalView: View {
 
                 Spacer()
 
-                // Edit button
                 Button(action: { showingEditPerson = true }) {
                     Image(systemName: "pencil")
                         .font(.system(size: 12))
@@ -119,137 +135,59 @@ struct JournalView: View {
             .padding(.horizontal, 24)
             .padding(.top, 12)
 
-            HStack(spacing: 16) {
-                // Large initials
+            HStack(spacing: 14) {
                 ZStack {
                     let wc = store.weather(for: person.id).colorRGB
                     Circle()
                         .fill(Color(red: wc.r, green: wc.g, blue: wc.b).opacity(0.15))
-                        .frame(width: 64, height: 64)
-                    Circle()
-                        .stroke(Color(red: wc.r, green: wc.g, blue: wc.b).opacity(0.3), lineWidth: 2)
-                        .frame(width: 64, height: 64)
+                        .frame(width: 44, height: 44)
                     Text(person.displayInitials)
-                        .font(.system(size: 22, weight: .bold, design: .serif))
+                        .font(.system(size: 17, weight: .bold, design: .serif))
                         .foregroundColor(Color(red: wc.r, green: wc.g, blue: wc.b))
                 }
                 .matchedGeometryEffect(id: "avatar-\(person.id)", in: namespace)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(person.name)
-                        .font(.system(size: 22, weight: .bold, design: .serif))
-                        .foregroundColor(tc.textPrimary)
-                        .matchedGeometryEffect(id: "name-\(person.id)", in: namespace)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 8) {
+                        Text(person.name)
+                            .font(.system(size: 20, weight: .bold, design: .serif))
+                            .foregroundColor(tc.textPrimary)
+                            .matchedGeometryEffect(id: "name-\(person.id)", in: namespace)
+
+                        let w = store.weather(for: person.id)
+                        let wc = w.colorRGB
+                        Image(systemName: w.icon)
+                            .font(.system(size: 14))
+                            .foregroundColor(Color(red: wc.r, green: wc.g, blue: wc.b))
+                    }
 
                     if !person.company.isEmpty {
                         Text(person.company)
-                            .font(.system(size: 13, design: .monospaced))
+                            .font(.system(size: 11, design: .monospaced))
                             .foregroundColor(tc.textSecondary)
-                    }
-
-                    // Tags
-                    if !person.tags.isEmpty {
-                        HStack(spacing: 4) {
-                            ForEach(person.tags, id: \.self) { tag in
-                                Text(tag)
-                                    .font(.system(size: 10, design: .monospaced))
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(tc.warmAccent.opacity(0.1))
-                                    .foregroundColor(tc.warmAccent)
-                                    .cornerRadius(4)
-                            }
-                        }
-                    }
-
-                    // Contact info
-                    HStack(spacing: 12) {
-                        if !person.email.isEmpty {
-                            Link(destination: URL(string: "mailto:\(person.email)")!) {
-                                HStack(spacing: 3) {
-                                    Image(systemName: "envelope.fill")
-                                        .font(.system(size: 9))
-                                    Text(person.email)
-                                        .font(.system(size: 10, design: .monospaced))
-                                }
-                                .foregroundColor(tc.warmAccent.opacity(0.7))
-                            }
-                        }
-                        if !person.phone.isEmpty {
-                            Link(destination: URL(string: "tel:\(person.phone)")!) {
-                                HStack(spacing: 3) {
-                                    Image(systemName: "phone.fill")
-                                        .font(.system(size: 9))
-                                    Text(person.phone)
-                                        .font(.system(size: 10, design: .monospaced))
-                                }
-                                .foregroundColor(tc.warmAccent.opacity(0.7))
-                            }
-                        }
                     }
                 }
 
                 Spacer()
 
-                // Weather badge
-                let w = store.weather(for: person.id)
-                let wc = w.colorRGB
-                VStack(spacing: 3) {
-                    Image(systemName: w.icon)
-                        .font(.system(size: 28))
-                        .foregroundColor(Color(red: wc.r, green: wc.g, blue: wc.b))
-                    Text(w.label)
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundColor(Color(red: wc.r, green: wc.g, blue: wc.b))
-                }
-            }
-            .padding(.horizontal, 40)
-            .padding(.vertical, 16)
-
-            // Birthday / dates row
-            if !person.birthday.isEmpty || !person.dates.isEmpty {
-                HStack(spacing: 16) {
-                    if !person.birthday.isEmpty {
-                        HStack(spacing: 4) {
-                            Image(systemName: "birthday.cake.fill")
-                                .font(.system(size: 10))
-                                .foregroundColor(.pink)
-                            Text(person.birthday)
+                // Tags inline in header
+                if !person.tags.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(person.tags, id: \.self) { tag in
+                            Text(tag)
                                 .font(.system(size: 10, design: .monospaced))
-                                .foregroundColor(tc.textSecondary)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(tc.warmAccent.opacity(0.1))
+                                .foregroundColor(tc.warmAccent)
+                                .cornerRadius(4)
                         }
                     }
-                    ForEach(person.dates) { nd in
-                        HStack(spacing: 4) {
-                            Image(systemName: "calendar")
-                                .font(.system(size: 10))
-                                .foregroundColor(tc.listAccent)
-                            Text("\(nd.label): \(nd.date)")
-                                .font(.system(size: 10, design: .monospaced))
-                                .foregroundColor(tc.textSecondary)
-                        }
-                    }
-                    Spacer()
                 }
-                .padding(.horizontal, 40)
-                .padding(.bottom, 8)
             }
+            .padding(.horizontal, 32)
+            .padding(.vertical, 10)
 
-            // Notes
-            if !person.notes.isEmpty {
-                HStack {
-                    Text(person.notes)
-                        .font(.system(size: 12, design: .serif))
-                        .foregroundColor(tc.textSecondary.opacity(0.8))
-                        .italic()
-                        .textSelection(.enabled)
-                    Spacer()
-                }
-                .padding(.horizontal, 40)
-                .padding(.bottom, 8)
-            }
-
-            // Divider
             Rectangle()
                 .fill(tc.borderInactive)
                 .frame(height: 1)
@@ -258,24 +196,28 @@ struct JournalView: View {
         .background(tc.journalBg)
     }
 
-    // MARK: - Memory Train
+    // MARK: - Pinned Notes
 
-    private var memoryTrain: some View {
-        let memories = store.memories(for: person.id)
+    private var pinnedNotes: some View {
+        HStack {
+            Text(person.notes)
+                .font(.system(size: 13, design: .serif))
+                .foregroundColor(tc.textSecondary.opacity(0.8))
+                .italic()
+                .textSelection(.enabled)
+            Spacer()
+        }
+        .padding(.bottom, 8)
+    }
 
-        return VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text("MEMORIES")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundColor(tc.textSecondary)
-                Text("(\(memories.count))")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(tc.textSecondary.opacity(0.6))
-                Spacer()
-            }
-            .padding(.bottom, 8)
+    // MARK: - Unified Timeline
 
-            if memories.isEmpty {
+    private var timelineContent: some View {
+        let items = store.interleaveTimeline(for: person.id)
+        let grouped = groupTimelineByMonth(items)
+
+        return VStack(alignment: .leading, spacing: 0) {
+            if items.isEmpty {
                 VStack(spacing: 12) {
                     Text("No memories yet")
                         .font(.system(size: 16, design: .serif))
@@ -287,7 +229,7 @@ struct JournalView: View {
                     Button(action: { showingAddMemory = true }) {
                         HStack(spacing: 6) {
                             Image(systemName: "plus.circle.fill")
-                            Text("Add a memory")
+                            Text("I want to remember...")
                                 .font(.system(size: 12, design: .serif))
                         }
                         .foregroundColor(tc.warmAccent)
@@ -297,95 +239,22 @@ struct JournalView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 40)
             } else {
-                // Group by date
-                let grouped = groupMemoriesByDate(memories)
-                ForEach(grouped, id: \.date) { group in
-                    // Date separator
-                    HStack {
-                        Rectangle().fill(tc.borderInactive).frame(height: 1)
-                        Text(group.date)
-                            .font(.system(size: 9, design: .monospaced))
-                            .foregroundColor(tc.textSecondary.opacity(0.5))
-                            .fixedSize()
-                        Rectangle().fill(tc.borderInactive).frame(height: 1)
-                    }
-                    .padding(.vertical, 8)
-
-                    ForEach(group.memories) { memory in
-                        MemoryRow(memory: memory, onDelete: { memoryToDelete = memory })
-                            .padding(.bottom, CGFloat(stableRandom(from: memory.id, range: 8...16)))
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Interaction Section
-
-    private var interactionSection: some View {
-        let interactions = store.interactions(for: person.id)
-
-        return VStack(alignment: .leading, spacing: 0) {
-            Button(action: { withAnimation { showInteractions.toggle() } }) {
-                HStack(spacing: 6) {
-                    Image(systemName: showInteractions ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 9))
-                    Text("INTERACTIONS")
-                        .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    Text("(\(interactions.count))")
-                        .font(.system(size: 11, design: .monospaced))
-                        .opacity(0.6)
-                    Spacer()
-                }
-                .foregroundColor(tc.textSecondary)
-            }
-            .buttonStyle(.plain)
-            .padding(.bottom, 8)
-
-            if showInteractions {
-                if interactions.isEmpty {
-                    Text("No interactions logged yet")
+                ForEach(grouped, id: \.label) { group in
+                    Text(group.label)
                         .font(.system(size: 12, design: .serif))
-                        .foregroundColor(tc.textSecondary.opacity(0.4))
+                        .foregroundColor(tc.textSecondary.opacity(0.5))
                         .italic()
-                        .padding(.vertical, 12)
-                } else {
-                    // Timeline
-                    ForEach(interactions) { interaction in
-                        HStack(alignment: .top, spacing: 10) {
-                            // Timeline dot + line
-                            VStack(spacing: 0) {
-                                let ch = Channel.from(interaction.channel)
-                                Circle()
-                                    .fill(tc.warmAccent.opacity(0.6))
-                                    .frame(width: 8, height: 8)
-                                    .overlay(
-                                        Image(systemName: ch.icon)
-                                            .font(.system(size: 6))
-                                            .foregroundColor(.white)
-                                    )
-                                Rectangle()
-                                    .fill(tc.borderInactive)
-                                    .frame(width: 1)
-                            }
-                            .frame(width: 8)
+                        .padding(.top, 16)
+                        .padding(.bottom, 8)
 
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 6) {
-                                    Text(Channel.from(interaction.channel).displayName)
-                                        .font(.system(size: 11, weight: .medium, design: .monospaced))
-                                        .foregroundColor(tc.textPrimary)
-                                    Text(interaction.shortDateDisplay)
-                                        .font(.system(size: 10, design: .monospaced))
-                                        .foregroundColor(tc.textSecondary.opacity(0.6))
-                                }
-                                if !interaction.note.isEmpty {
-                                    Text(interaction.note)
-                                        .font(.system(size: 12, design: .serif))
-                                        .foregroundColor(tc.textSecondary.opacity(0.8))
-                                }
-                            }
-                            .padding(.bottom, 12)
+                    ForEach(group.items) { item in
+                        switch item {
+                        case .memory(let memory):
+                            MemoryRow(memory: memory, onDelete: { memoryToDelete = memory })
+                                .padding(.bottom, CGFloat(stableRandom(from: memory.id, range: 8...16)))
+                        case .interaction(let interaction):
+                            InteractionRow(interaction: interaction)
+                                .padding(.bottom, 8)
                         }
                     }
                 }
@@ -393,43 +262,392 @@ struct JournalView: View {
         }
     }
 
-    // MARK: - Helpers
+    // MARK: - Interaction Row
 
-    private struct DateGroup {
-        let date: String
-        let memories: [Memory]
+    private struct InteractionRow: View {
+        @EnvironmentObject var theme: ThemeManager
+        let interaction: Interaction
+
+        private var tc: ThemeColors { theme.colors }
+
+        var body: some View {
+            let ch = Channel.from(interaction.channel)
+            let channelColor = tc.warmAccent
+
+            HStack(alignment: .top, spacing: 10) {
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(channelColor.opacity(0.5))
+                    .frame(width: 3)
+
+                Image(systemName: ch.icon)
+                    .font(.system(size: 10))
+                    .foregroundColor(channelColor.opacity(0.7))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(ch.displayName)
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundColor(tc.textPrimary)
+                        Text(interaction.shortDateDisplay)
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(tc.textSecondary.opacity(0.5))
+                    }
+                    if !interaction.note.isEmpty {
+                        Text(interaction.note)
+                            .font(.system(size: 12, design: .serif))
+                            .foregroundColor(tc.textSecondary.opacity(0.8))
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(.vertical, 6)
+        }
     }
 
-    private func groupMemoriesByDate(_ memories: [Memory]) -> [DateGroup] {
+    // MARK: - Helpers
+
+    private struct MonthGroup {
+        let label: String
+        let items: [PeoplStore.TimelineItem]
+    }
+
+    private func groupTimelineByMonth(_ items: [PeoplStore.TimelineItem]) -> [MonthGroup] {
         let fmt = DateFormatter()
         fmt.dateFormat = "MMMM yyyy"
 
-        var groups: [(String, [Memory])] = []
+        var groups: [(String, [PeoplStore.TimelineItem])] = []
         var currentLabel = ""
-        var currentGroup: [Memory] = []
+        var currentGroup: [PeoplStore.TimelineItem] = []
 
-        for mem in memories {
-            let label: String
-            if let d = ISO8601Flexible.date(from: mem.created_at) {
-                label = fmt.string(from: d)
-            } else {
-                label = "Unknown"
-            }
-
+        for item in items {
+            let label = fmt.string(from: item.sortDate).lowercased()
             if label != currentLabel {
                 if !currentGroup.isEmpty {
                     groups.append((currentLabel, currentGroup))
                 }
                 currentLabel = label
-                currentGroup = [mem]
+                currentGroup = [item]
             } else {
-                currentGroup.append(mem)
+                currentGroup.append(item)
             }
         }
         if !currentGroup.isEmpty {
             groups.append((currentLabel, currentGroup))
         }
 
-        return groups.map { DateGroup(date: $0.0, memories: $0.1) }
+        return groups.map { MonthGroup(label: $0.0, items: $0.1) }
+    }
+}
+
+// MARK: - Person Details Panel (right column)
+
+struct PersonDetailsPanel: View {
+    @EnvironmentObject var store: PeoplStore
+    @EnvironmentObject var theme: ThemeManager
+    let person: Person
+
+    @State private var editingFieldID: String?
+    @State private var editText = ""
+    @State private var showAddField = false
+    @State private var newFieldLabel = ""
+    @State private var newFieldIcon = "star.fill"
+    @State private var showSuggestions = false
+
+    private var tc: ThemeColors { theme.colors }
+
+    // Current person from store (live)
+    private var livePerson: Person {
+        store.data.people.first { $0.id == person.id } ?? person
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                // Section header
+                HStack {
+                    Text("About \(livePerson.name)")
+                        .font(.system(size: 13, weight: .semibold, design: .serif))
+                        .foregroundColor(tc.textPrimary)
+                    Spacer()
+                }
+                .padding(.bottom, 16)
+
+                // Built-in fields (always visible)
+                builtInFields
+
+                // Divider
+                if !livePerson.details.isEmpty {
+                    Rectangle()
+                        .fill(tc.borderInactive)
+                        .frame(height: 1)
+                        .padding(.vertical, 12)
+                }
+
+                // Custom detail fields
+                ForEach(livePerson.details) { field in
+                    detailFieldRow(field)
+                }
+
+                // Add field area
+                addFieldSection
+                    .padding(.top, 16)
+            }
+            .padding(20)
+        }
+        .background(tc.journalBg)
+    }
+
+    // MARK: - Built-in Fields
+
+    private var builtInFields: some View {
+        VStack(spacing: 0) {
+            if !livePerson.email.isEmpty {
+                staticFieldRow(icon: "envelope.fill", label: "Email", value: livePerson.email, link: "mailto:\(livePerson.email)")
+            }
+            if !livePerson.phone.isEmpty {
+                staticFieldRow(icon: "phone.fill", label: "Phone", value: livePerson.phone, link: "tel:\(livePerson.phone)")
+            }
+            if !livePerson.company.isEmpty {
+                staticFieldRow(icon: "building.2.fill", label: "Company", value: livePerson.company)
+            }
+            if !livePerson.birthday.isEmpty {
+                staticFieldRow(icon: "birthday.cake.fill", label: "Birthday", value: livePerson.birthday)
+            }
+            if !livePerson.dates.isEmpty {
+                ForEach(livePerson.dates) { nd in
+                    staticFieldRow(icon: "calendar", label: nd.label, value: nd.date)
+                }
+            }
+        }
+    }
+
+    private func staticFieldRow(icon: String, label: String, value: String, link: String? = nil) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 11))
+                .foregroundColor(tc.warmAccent.opacity(0.7))
+                .frame(width: 16, alignment: .center)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(label)
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .foregroundColor(tc.textSecondary.opacity(0.6))
+                if let link, let url = URL(string: link) {
+                    Link(destination: url) {
+                        Text(value)
+                            .font(.system(size: 12, design: .serif))
+                            .foregroundColor(tc.warmAccent)
+                    }
+                } else {
+                    Text(value)
+                        .font(.system(size: 12, design: .serif))
+                        .foregroundColor(tc.textPrimary)
+                        .textSelection(.enabled)
+                }
+            }
+
+            Spacer()
+        }
+        .padding(.vertical, 6)
+    }
+
+    // MARK: - Detail Field Row (editable)
+
+    private func detailFieldRow(_ field: PersonField) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: field.icon)
+                .font(.system(size: 11))
+                .foregroundColor(tc.warmAccent.opacity(0.7))
+                .frame(width: 16, alignment: .center)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(field.label)
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .foregroundColor(tc.textSecondary.opacity(0.6))
+
+                if editingFieldID == field.id {
+                    TextField("", text: $editText)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12, design: .serif))
+                        .foregroundColor(tc.textPrimary)
+                        .onSubmit { saveFieldEdit(field) }
+                        .overlay(alignment: .bottom) {
+                            Rectangle().fill(tc.warmAccent.opacity(0.5)).frame(height: 1)
+                        }
+                } else {
+                    Text(field.value.isEmpty ? "..." : field.value)
+                        .font(.system(size: 12, design: .serif))
+                        .foregroundColor(field.value.isEmpty ? tc.textSecondary.opacity(0.3) : tc.textPrimary)
+                        .textSelection(.enabled)
+                        .onTapGesture {
+                            editingFieldID = field.id
+                            editText = field.value
+                        }
+                }
+            }
+
+            Spacer()
+
+            // Delete button (on hover would be ideal, but simpler to always show small)
+            if editingFieldID == field.id {
+                HStack(spacing: 6) {
+                    Button(action: { saveFieldEdit(field) }) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.green)
+                    }
+                    .buttonStyle(.plain)
+                    Button(action: { editingFieldID = nil }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(tc.textSecondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            } else {
+                Button(action: { removeField(field) }) {
+                    Image(systemName: "minus.circle.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(tc.textSecondary.opacity(0.2))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+
+    // MARK: - Add Field Section
+
+    private var addFieldSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // Suggestions (collapsed by default)
+            if showSuggestions {
+                suggestionsGrid
+            }
+
+            if showAddField {
+                // Custom field entry
+                HStack(spacing: 8) {
+                    TextField("Field name", text: $newFieldLabel)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12, design: .serif))
+                        .padding(.vertical, 4)
+                        .overlay(alignment: .bottom) {
+                            Rectangle().fill(tc.borderInactive).frame(height: 1)
+                        }
+                    Button(action: addCustomField) {
+                        Text("Add")
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(tc.warmAccent)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(newFieldLabel.trimmingCharacters(in: .whitespaces).isEmpty)
+                    Button(action: { showAddField = false; newFieldLabel = "" }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10))
+                            .foregroundColor(tc.textSecondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            HStack(spacing: 12) {
+                Button(action: { withAnimation(.easeInOut(duration: 0.2)) { showSuggestions.toggle() } }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: showSuggestions ? "chevron.up" : "sparkles")
+                            .font(.system(size: 10))
+                        Text(showSuggestions ? "Hide suggestions" : "Add a detail")
+                            .font(.system(size: 11, design: .serif))
+                    }
+                    .foregroundColor(tc.warmAccent)
+                }
+                .buttonStyle(.plain)
+
+                if !showAddField {
+                    Button(action: { showAddField = true }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 10))
+                            Text("Custom field")
+                                .font(.system(size: 11, design: .serif))
+                        }
+                        .foregroundColor(tc.textSecondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    // MARK: - Suggestions Grid
+
+    private var suggestionsGrid: some View {
+        let existingLabels = Set(livePerson.details.map { $0.label })
+        let available = SuggestedField.allCases.filter { !existingLabels.contains($0.label) }
+
+        return FlowLayout(spacing: 6) {
+            ForEach(available, id: \.rawValue) { suggestion in
+                Button(action: { addSuggestedField(suggestion) }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: suggestion.icon)
+                            .font(.system(size: 9))
+                        Text(suggestion.label)
+                            .font(.system(size: 10, design: .serif))
+                    }
+                    .foregroundColor(tc.textSecondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(tc.surface)
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(tc.borderInactive, lineWidth: 0.5)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.bottom, 4)
+    }
+
+    // MARK: - Actions
+
+    private func addSuggestedField(_ suggestion: SuggestedField) {
+        var updated = livePerson
+        let field = PersonField(id: UUID().uuidString, label: suggestion.label, value: "", icon: suggestion.icon)
+        updated.details.append(field)
+        store.updatePerson(updated)
+        // Auto-focus the new field for editing
+        editingFieldID = field.id
+        editText = ""
+    }
+
+    private func addCustomField() {
+        let label = newFieldLabel.trimmingCharacters(in: .whitespaces)
+        guard !label.isEmpty else { return }
+        var updated = livePerson
+        let field = PersonField(id: UUID().uuidString, label: label, value: "", icon: newFieldIcon)
+        updated.details.append(field)
+        store.updatePerson(updated)
+        newFieldLabel = ""
+        showAddField = false
+        editingFieldID = field.id
+        editText = ""
+    }
+
+    private func saveFieldEdit(_ field: PersonField) {
+        var updated = livePerson
+        if let idx = updated.details.firstIndex(where: { $0.id == field.id }) {
+            updated.details[idx].value = editText.trimmingCharacters(in: .whitespaces)
+            store.updatePerson(updated)
+        }
+        editingFieldID = nil
+    }
+
+    private func removeField(_ field: PersonField) {
+        var updated = livePerson
+        updated.details.removeAll { $0.id == field.id }
+        store.updatePerson(updated)
     }
 }

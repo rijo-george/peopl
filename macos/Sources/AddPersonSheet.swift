@@ -20,7 +20,7 @@ struct AddPersonSheet: View {
             HStack {
                 Image(systemName: "person.badge.plus")
                     .foregroundColor(tc.warmAccent)
-                Text("New Person")
+                Text("Someone new")
                     .font(.system(size: 16, weight: .semibold, design: .serif))
             }
 

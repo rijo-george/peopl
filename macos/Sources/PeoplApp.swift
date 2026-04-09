@@ -18,13 +18,15 @@ struct PeoplApp: App {
         .defaultSize(width: 1080, height: 720)
         .commands {
             CommandGroup(after: .newItem) {
-                Button("Add Person") { shortcuts.trigger(.addPerson) }
+                Button("Someone new") { shortcuts.trigger(.addPerson) }
                     .keyboardShortcut("n", modifiers: [.command])
                 Divider()
-                Button("Add Memory") { shortcuts.trigger(.addMemory) }
+                Button("I want to remember...") { shortcuts.trigger(.addMemory) }
                     .keyboardShortcut("m", modifiers: [.command, .shift])
-                Button("Log Interaction") { shortcuts.trigger(.addInteraction) }
+                Button("We talked") { shortcuts.trigger(.addInteraction) }
                     .keyboardShortcut("i", modifiers: [.command, .shift])
+                Button("Quick Capture") { shortcuts.trigger(.quickCapture) }
+                    .keyboardShortcut("k", modifiers: [.command, .shift])
                 Button("Edit Person") { shortcuts.trigger(.editPerson) }
                     .keyboardShortcut("e", modifiers: [.command])
                 Divider()
@@ -40,7 +42,7 @@ struct PeoplApp: App {
 // MARK: - Shortcut State
 
 enum ShortcutAction {
-    case addPerson, addMemory, addInteraction, editPerson, changeTheme, goBack
+    case addPerson, addMemory, addInteraction, editPerson, changeTheme, goBack, quickCapture
 }
 
 class ShortcutState: ObservableObject {

@@ -42,7 +42,7 @@ struct AddMemorySheet: View {
             HStack {
                 Image(systemName: "brain.filled.head.profile")
                     .foregroundColor(tc.warmAccent)
-                Text("New Memory")
+                Text("I want to remember...")
                     .font(.system(size: 16, weight: .semibold, design: .serif))
                 Spacer()
                 Text("about \(person.name)")

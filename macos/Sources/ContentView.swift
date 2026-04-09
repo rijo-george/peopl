@@ -10,6 +10,7 @@ struct ContentView: View {
     @State private var showingAddMemory = false
     @State private var showingAddInteraction = false
     @State private var showingEditPerson = false
+    @FocusState private var captureBarFocused: Bool
     @Namespace private var cardTransition
 
     private var tc: ThemeColors { theme.colors }
@@ -20,28 +21,35 @@ struct ContentView: View {
     }
 
     var body: some View {
-        ZStack {
-            tc.bg.ignoresSafeArea()
+        VStack(spacing: 0) {
+            ZStack {
+                tc.bg.ignoresSafeArea()
 
-            if let person = selectedPerson {
-                JournalView(
-                    person: person,
-                    namespace: cardTransition,
-                    onBack: { withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { selectedPersonID = nil } },
-                    showingAddMemory: $showingAddMemory,
-                    showingAddInteraction: $showingAddInteraction,
-                    showingEditPerson: $showingEditPerson
-                )
-                .transition(.opacity.combined(with: .scale(scale: 0.98)))
-            } else {
-                WallView(
-                    selectedPersonID: $selectedPersonID,
-                    namespace: cardTransition,
-                    onAddPerson: { showingAddPerson = true },
-                    onOpenThemePicker: { showingThemePicker = true }
-                )
-                .transition(.opacity)
+                if let person = selectedPerson {
+                    JournalView(
+                        person: person,
+                        namespace: cardTransition,
+                        onBack: { withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { selectedPersonID = nil } },
+                        showingAddMemory: $showingAddMemory,
+                        showingAddInteraction: $showingAddInteraction,
+                        showingEditPerson: $showingEditPerson
+                    )
+                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                } else {
+                    WallView(
+                        selectedPersonID: $selectedPersonID,
+                        namespace: cardTransition,
+                        onAddPerson: { showingAddPerson = true },
+                        onOpenThemePicker: { showingThemePicker = true }
+                    )
+                    .transition(.opacity)
+                }
             }
+
+            QuickCaptureBar(
+                contextPersonID: selectedPersonID,
+                isFocused: $captureBarFocused
+            )
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.85), value: selectedPersonID)
         .sheet(isPresented: $showingAddPerson) {
@@ -91,6 +99,8 @@ struct ContentView: View {
                 if selectedPersonID != nil {
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { selectedPersonID = nil }
                 }
+            case .quickCapture:
+                captureBarFocused = true
             }
         }
         .onAppear { store.load() }

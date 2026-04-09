@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Peopl — Personal CRM for Mac</title>
+    <title>Peopl — Your Living Memory Box</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Special+Elite&display=swap" rel="stylesheet">
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:'IBM Plex Mono','Courier New',monospace;background:#f4efe6;color:#4a3f34;min-height:100vh;display:flex;flex-direction:column;align-items:center}
         body::before{content:'';position:fixed;inset:0;opacity:.035;mix-blend-mode:multiply;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");pointer-events:none;z-index:999}
-        .c{max-width:600px;width:100%;padding:0 24px;display:flex;flex-direction:column;align-items:center;position:relative;z-index:1}
+        .c{max-width:640px;width:100%;padding:0 24px;display:flex;flex-direction:column;align-items:center;position:relative;z-index:1}
         header{width:100%;display:flex;justify-content:space-between;align-items:center;padding:36px 0 0}
         .wm{font-family:'Special Elite',monospace;font-size:16px;color:#8a7a68;letter-spacing:2px}
         header a{font-size:12px;color:#a0937f;text-decoration:none;transition:color .3s}header a:hover{color:#4a3f34}
@@ -19,45 +19,49 @@
         .icon svg{width:32px;height:32px}
         h1{font-family:'Special Elite',monospace;font-size:clamp(26px,5vw,38px);font-weight:400;color:#1a1a1a;line-height:1.25;margin-bottom:24px}
         h1 span{color:#c06830}
-        .sub{font-size:14px;line-height:1.8;color:#888;max-width:400px;margin:0 auto 44px}
+        .sub{font-size:14px;line-height:1.8;color:#888;max-width:440px;margin:0 auto 44px}
         .btn{display:inline-flex;align-items:center;gap:10px;padding:14px 30px;background:rgba(210,120,60,.08);border:1px solid rgba(210,120,60,.15);border-radius:10px;color:#c06830;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:500;text-decoration:none;transition:all .3s}
         .btn:hover{background:rgba(210,120,60,.14);transform:translateY(-1px)}
         .btn svg{width:15px;height:15px;opacity:.7}
         .meta{margin-top:14px;font-size:11px;color:#aaa}
         .line{width:100%;height:1px;background:linear-gradient(90deg,transparent,rgba(0,0,0,.06),transparent)}
+        .ver{display:inline-block;font-size:10px;color:#c06830;background:rgba(210,120,60,.08);padding:2px 8px;border-radius:4px;margin-bottom:20px;font-weight:500}
 
         /* Mockup */
-        .mockup{width:100%;max-width:480px;margin:20px auto 50px}
-        .mock-app{background:#1a1a1a;border-radius:10px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.15);border:1px solid rgba(0,0,0,.08)}
-        .mock-titlebar{height:28px;background:#0d0d0d;display:flex;align-items:center;padding:0 12px;gap:6px}
+        .mockup{width:100%;max-width:520px;margin:20px auto 50px}
+        .mock-app{background:#f8f5f0;border-radius:10px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.12);border:1px solid rgba(0,0,0,.06)}
+        .mock-titlebar{height:28px;background:#efe8dd;display:flex;align-items:center;padding:0 12px;gap:6px}
         .mock-titlebar .dot{width:8px;height:8px;border-radius:50%}
-        .mock-titlebar span{flex:1;text-align:center;font-size:10px;color:#555;font-family:'IBM Plex Mono',monospace}
-        .mock-body{display:grid;grid-template-columns:170px 1fr;min-height:200px}
-        .mock-list{border-right:1px solid rgba(255,255,255,.06);padding:8px}
-        .mock-list-hdr{font-size:8px;color:#666;text-transform:uppercase;letter-spacing:1px;padding:4px 6px;margin-bottom:4px}
-        .mock-person{display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:5px;margin-bottom:2px;font-size:10px;color:#ccc;font-family:'IBM Plex Mono',monospace}
-        .mock-person.sel{background:rgba(120,100,230,.15)}
-        .mock-weather{font-size:11px}
-        .mock-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .mock-date{font-size:8px;color:#666}
-        .mock-detail{padding:12px}
-        .mock-detail-hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-        .mock-avatar{width:32px;height:32px;border-radius:50%;background:rgba(120,100,230,.15);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#9b88f0;font-family:'IBM Plex Mono',monospace}
-        .mock-detail-name{font-size:12px;font-weight:600;color:#e0d5c8;font-family:'IBM Plex Mono',monospace}
-        .mock-detail-co{font-size:9px;color:#666}
-        .mock-detail-weather{margin-left:auto;text-align:center}
-        .mock-detail-weather .icon-w{font-size:16px}
-        .mock-detail-weather .label-w{font-size:7px;color:#e0b44c}
-        .mock-tags{display:flex;gap:3px;margin-bottom:8px;flex-wrap:wrap}
-        .mock-tag{font-size:7px;padding:2px 5px;border-radius:3px;background:rgba(120,100,230,.1);color:#9b88f0;font-family:'IBM Plex Mono',monospace}
-        .mock-interactions{border-top:1px solid rgba(255,255,255,.06);padding-top:8px}
-        .mock-int-hdr{font-size:7px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
-        .mock-int{display:flex;align-items:flex-start;gap:6px;padding:4px 0;font-size:9px;color:#999;font-family:'IBM Plex Mono',monospace}
-        .mock-int-icon{font-size:10px}
-        .mock-int-note{color:#bbb}
-        .mock-toolbar{display:flex;gap:8px;padding:6px 10px;background:#0d0d0d;border-top:1px solid rgba(255,255,255,.06)}
-        .mock-tb-btn{font-size:8px;color:#666;font-family:'IBM Plex Mono',monospace;display:flex;align-items:center;gap:3px}
-        .mock-tb-btn span{font-size:7px;color:#444}
+        .mock-titlebar span{flex:1;text-align:center;font-size:10px;color:#8a7a68;font-family:'Special Elite',monospace}
+        .mock-wall{padding:12px}
+        .mock-wall-hdr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+        .mock-wall-title{font-family:'Special Elite',monospace;font-size:16px;color:#2a1f18}
+        .mock-wall-status{font-size:9px;color:#999}
+
+        /* Nudge card */
+        .mock-nudge{background:linear-gradient(135deg,rgba(230,170,80,.15),rgba(248,245,240,.05));border-radius:8px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px}
+        .mock-nudge-avatar{width:36px;height:36px;border-radius:50%;background:rgba(85,55,170,.12);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#7755cc;font-family:'IBM Plex Mono',monospace;flex-shrink:0}
+        .mock-nudge-text{font-size:10px;color:#4a3f34;font-family:'Special Elite',monospace;line-height:1.5}
+        .mock-nudge-text em{font-style:italic;color:#999;font-family:'IBM Plex Mono',monospace;font-size:9px;display:block;margin-top:2px}
+        .mock-nudge-pills{display:flex;gap:4px;margin-left:auto;flex-shrink:0}
+        .mock-pill{font-size:8px;padding:3px 8px;border-radius:10px;background:rgba(210,120,60,.08);color:#c06830;font-family:'IBM Plex Mono',monospace}
+
+        /* Card grid */
+        .mock-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px}
+        .mock-card{background:#fdfaf6;border-radius:6px;padding:8px;box-shadow:0 2px 8px rgba(80,60,40,.06)}
+        .mock-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+        .mock-card-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;font-family:'IBM Plex Mono',monospace}
+        .mock-card-weather{font-size:12px}
+        .mock-card-name{font-size:10px;font-weight:600;color:#2a1f18;font-family:'Special Elite',monospace}
+        .mock-card-co{font-size:8px;color:#999;margin-top:1px}
+        .mock-card-snip{font-size:8px;color:#bbb;font-style:italic;margin-top:4px;line-height:1.4}
+        .mock-card-new{background:transparent;border:1px dashed #ccc;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#ccc;font-size:9px;font-family:'IBM Plex Mono',monospace;min-height:80px}
+        .mock-card-new span{font-size:16px;margin-bottom:2px}
+
+        /* Capture bar */
+        .mock-capture{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f0ebe3;border-top:1px solid rgba(0,0,0,.04)}
+        .mock-capture-input{flex:1;font-size:10px;color:#bbb;font-family:'Special Elite',monospace;font-style:italic}
+        .mock-capture-mic{font-size:12px;color:#999}
 
         /* Features */
         .how{width:100%;padding:48px 0}
@@ -71,7 +75,7 @@
         footer{width:100%;padding:36px 0;text-align:center}
         footer p{font-size:11px;color:#bbb}
         footer a{color:#999;text-decoration:none}footer a:hover{color:#4a3f34}
-        @media(max-width:540px){.features{grid-template-columns:1fr}.mock-body{grid-template-columns:1fr}.mock-detail{display:none}}
+        @media(max-width:540px){.features{grid-template-columns:1fr}.mock-grid{grid-template-columns:1fr 1fr}.mock-nudge-pills{display:none}}
     </style>
 </head>
 <body>
@@ -79,13 +83,14 @@
         <header><div class="wm">peopl</div><a href="https://github.com/rijo-george/peopl">github</a></header>
         <section class="hero">
             <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#d2783c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+            <span class="ver">v3.0 &mdash; Living Memory Box</span>
             <h1>Remember the people <span>who matter</span></h1>
-            <p class="sub">A stupid simple personal CRM. Track who you know, log interactions, see birthdays, and watch your relationship weather.</p>
+            <p class="sub">A warm, personal space for the people in your life. Capture memories, track relationships, and never forget what makes someone special.</p>
             <a href="https://github.com/rijo-george/peopl/releases/latest" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Download for Mac</a>
-            <p class="meta">macOS 14+ &middot; universal &middot; free</p>
+            <p class="meta">macOS 14+ &middot; universal &middot; free &middot; signed &amp; notarized</p>
         </section>
 
-        <!-- Mockup -->
+        <!-- Mockup: Wall view -->
         <section class="mockup">
             <div class="mock-app">
                 <div class="mock-titlebar">
@@ -94,61 +99,60 @@
                     <div class="dot" style="background:#28c840"></div>
                     <span>Peopl</span>
                 </div>
-                <div class="mock-body">
-                    <div class="mock-list">
-                        <div class="mock-list-hdr">3 people</div>
-                        <div class="mock-person sel">
-                            <span class="mock-weather" title="Sunny">&#9728;&#65039;</span>
-                            <span class="mock-name">Priya Nair</span>
-                            <span class="mock-date">Apr 2</span>
+                <div class="mock-wall">
+                    <div class="mock-wall-hdr">
+                        <div>
+                            <div class="mock-wall-title">Peopl</div>
+                            <div class="mock-wall-status">3 people in your life</div>
                         </div>
-                        <div class="mock-person">
-                            <span class="mock-weather" title="Cloudy">&#9729;&#65039;</span>
-                            <span class="mock-name">James Chen</span>
-                            <span class="mock-date">Mar 10</span>
+                        <div style="font-size:9px;color:#d4748a;font-style:italic;font-family:'Special Elite',monospace">Priya's birthday in 3 days</div>
+                    </div>
+
+                    <!-- Nudge card -->
+                    <div class="mock-nudge">
+                        <div class="mock-nudge-avatar">SK</div>
+                        <div class="mock-nudge-text">
+                            It's been 47 days since you talked to Sarah.
+                            <em>"She mentioned wanting to try that new ramen place"</em>
                         </div>
-                        <div class="mock-person">
-                            <span class="mock-weather" title="Stormy">&#9928;&#65039;</span>
-                            <span class="mock-name">Sarah Kim</span>
-                            <span class="mock-date">Jan 15</span>
+                        <div class="mock-nudge-pills">
+                            <span class="mock-pill">Call</span>
+                            <span class="mock-pill">Text</span>
+                            <span class="mock-pill">Open</span>
                         </div>
                     </div>
-                    <div class="mock-detail">
-                        <div class="mock-detail-hdr">
-                            <div class="mock-avatar">PN</div>
-                            <div>
-                                <div class="mock-detail-name">Priya Nair</div>
-                                <div class="mock-detail-co">42Square</div>
+
+                    <!-- Card grid -->
+                    <div class="mock-grid">
+                        <div class="mock-card">
+                            <div class="mock-card-top">
+                                <div class="mock-card-avatar" style="background:rgba(255,217,50,.15);color:#e0b44c">PN</div>
+                                <span class="mock-card-weather" title="Sunny">&#9728;&#65039;</span>
                             </div>
-                            <div class="mock-detail-weather">
-                                <div class="icon-w">&#9728;&#65039;</div>
-                                <div class="label-w">Sunny</div>
-                            </div>
+                            <div class="mock-card-name">Priya Nair</div>
+                            <div class="mock-card-co">42Square</div>
+                            <div class="mock-card-snip">"loves pottery and sourdough"</div>
                         </div>
-                        <div class="mock-tags">
-                            <span class="mock-tag">work</span>
-                            <span class="mock-tag">engineering</span>
-                            <span class="mock-tag">kochi</span>
+                        <div class="mock-card">
+                            <div class="mock-card-top">
+                                <div class="mock-card-avatar" style="background:rgba(100,140,220,.15);color:#5580cc">JC</div>
+                                <span class="mock-card-weather" title="Cloudy">&#9729;&#65039;</span>
+                            </div>
+                            <div class="mock-card-name">James Chen</div>
+                            <div class="mock-card-co">Freelance</div>
+                            <div class="mock-card-snip">"brought homemade sourdough"</div>
                         </div>
-                        <div class="mock-interactions">
-                            <div class="mock-int-hdr">Interactions (3)</div>
-                            <div class="mock-int">
-                                <span class="mock-int-icon">&#9749;</span>
-                                <div><span class="mock-int-note">Coffee &middot; Apr 2</span><br>Discussed the new auth system</div>
-                            </div>
-                            <div class="mock-int">
-                                <span class="mock-int-icon">&#128172;</span>
-                                <div><span class="mock-int-note">Text &middot; Mar 28</span><br>Shared link to that talk</div>
-                            </div>
+                        <div class="mock-card mock-card-new">
+                            <span>+</span>
+                            Someone new
                         </div>
                     </div>
                 </div>
-                <div class="mock-toolbar">
-                    <div class="mock-tb-btn">Add <span>[A]</span></div>
-                    <div class="mock-tb-btn">Interact <span>[I]</span></div>
-                    <div class="mock-tb-btn">Edit <span>[E]</span></div>
-                    <div class="mock-tb-btn">Archive <span>[D]</span></div>
-                    <div class="mock-tb-btn">Theme <span>[T]</span></div>
+
+                <!-- Quick capture bar -->
+                <div class="mock-capture">
+                    <div class="mock-capture-input">priya - loves pottery</div>
+                    <div class="mock-capture-mic">&#127908;</div>
                 </div>
             </div>
         </section>
@@ -156,37 +160,45 @@
         <div class="line"></div>
 
         <section class="how">
-            <h2>What makes it different</h2>
+            <h2>What's inside</h2>
             <div class="features">
                 <div class="feat">
+                    <h3>&#128140; Nudge Cards</h3>
+                    <p>Open the app and it tells you who needs attention. Call, text, or skip — one tap away.</p>
+                </div>
+                <div class="feat">
+                    <h3>&#9889; Quick Capture</h3>
+                    <p>Type "priya - loves pottery" and it's saved. Voice memos too. Always-visible bar at the bottom.</p>
+                </div>
+                <div class="feat">
+                    <h3>&#128218; Living Timeline</h3>
+                    <p>Memories and interactions woven into one stream, grouped by month. Your shared history at a glance.</p>
+                </div>
+                <div class="feat">
+                    <h3>&#128203; Person Details</h3>
+                    <p>Food, music, movies, hobbies, allergies — 20+ suggested fields plus custom ones. Know what makes them tick.</p>
+                </div>
+                <div class="feat">
                     <h3>&#127780;&#65039; Relationship Weather</h3>
-                    <p>Each person gets a weather icon based on how recently you've been in touch. Sunny to stormy — know at a glance who needs attention.</p>
+                    <p>Each person gets a weather icon. Sunny to stormy — know at a glance who needs love.</p>
                 </div>
                 <div class="feat">
-                    <h3>&#127874; Birthdays & Dates</h3>
-                    <p>Never miss a birthday. The "Coming Up" section shows all important dates in the next two weeks.</p>
+                    <h3>&#127776; Surfaced Memories</h3>
+                    <p>"1 year ago — about James: He brought homemade sourdough..." Old memories bubble up to surprise you.</p>
                 </div>
                 <div class="feat">
-                    <h3>&#9889; Keyboard First</h3>
-                    <p>Add a person [A], log an interaction [I], navigate with j/k. Everything is one keystroke away.</p>
+                    <h3>&#127912; 7 Themes</h3>
+                    <p>Journal, dark, light, sunset, ocean, forest, rose. Each with warm colors that feel alive.</p>
                 </div>
                 <div class="feat">
                     <h3>&#9729;&#65039; iCloud Sync</h3>
-                    <p>One JSON file. Syncs across Mac and iOS via iCloud Drive. No account, no server, no tracking.</p>
-                </div>
-                <div class="feat">
-                    <h3>&#127912; 6 Themes</h3>
-                    <p>Dark, light, sunset, ocean, forest, rose. Switch with [T] or press 1-6.</p>
-                </div>
-                <div class="feat">
-                    <h3>&#128203; Interaction Log</h3>
-                    <p>Coffee, call, email, text, meeting. Log what happened with who and when. Build a history.</p>
+                    <p>One JSON file. Syncs via iCloud Drive. No account, no server, no tracking. Your data stays yours.</p>
                 </div>
             </div>
         </section>
 
         <div class="line"></div>
-        <section class="about"><p>No account. No cloud service. No tracking. Just a local app that helps you remember the people in your life. Your data stays on your devices.</p></section>
+        <section class="about"><p>No account. No cloud service. No tracking. Just a quiet app that helps you remember the people in your life. Your data never leaves your devices.</p></section>
         <div class="line"></div>
         <footer><p>made by <a href="https://github.com/rijo-george">rijo</a> &middot; <a href="https://github.com/rijo-george/peopl">github</a> &middot; 2026</p></footer>
     </div>
